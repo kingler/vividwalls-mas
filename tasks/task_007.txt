@@ -1,0 +1,11 @@
+# Task ID: 7
+# Title: Develop Image Generation Module
+# Status: pending
+# Dependencies: 4
+# Priority: medium
+# Description: Implement functionality to create composite images using OpenAI Image Generation API
+# Details:
+Create a module that uses OpenAI Image Generation API (gpt-4o, gpt-image-1) to generate composite images. Implement logic to ensure exact replication of both VividWalls artwork and customer room. Develop positioning algorithm to place artwork naturally on identified wall (hanging or leaning). Generate high-fidelity composite images showing artwork in space.
+
+# Test Strategy:
+Test with various room images and artwork combinations. Verify natural positioning and realistic integration of artwork into the space. Ensure image quality meets requirements.

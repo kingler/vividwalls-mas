@@ -1,0 +1,62 @@
+{
+  "pictorem_api": {
+    "base_url": "https://www.pictorem.com/api",
+    "login_url": "https://www.pictorem.com/login",
+    "order_url": "https://www.pictorem.com/order.html",
+    "credentials": {
+      "username": "kingler@me.com",
+      "password": "#Freedom2023#"
+    }
+  },
+  "size_mapping": {
+    "36x48": {
+      "pictorem_size": "36x48",
+      "supported": true
+    },
+    "24x36": {
+      "pictorem_size": "24x36",
+      "supported": true
+    },
+    "48x36": {
+      "pictorem_size": "48x36",
+      "supported": true
+    },
+    "36x24": {
+      "pictorem_size": "36x24",
+      "supported": true
+    }
+  },
+  "frame_mapping": {
+    "Black": {
+      "pictorem_frame": "Black",
+      "cost_added": true
+    },
+    "White": {
+      "pictorem_frame": "White",
+      "cost_added": true
+    }
+  },
+  "canvas_types": [
+    "Stretched",
+    "Roll"
+  ],
+  "pro_discount": 0.15,
+  "markup_strategy": {
+    "low_cost": {
+      "threshold": 50,
+      "multiplier": 2.8
+    },
+    "medium_cost": {
+      "threshold": 100,
+      "multiplier": 2.4
+    },
+    "high_cost": {
+      "threshold": 200,
+      "multiplier": 2.1
+    },
+    "premium_cost": {
+      "threshold": 999999,
+      "multiplier": 1.9
+    }
+  }
+}

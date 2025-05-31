@@ -1,0 +1,608 @@
+{
+  "name": "VividWalls E-commerce Order Fulfillment System",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "options": {
+          "systemMessage": "You are the Order Management Agent responsible for processing Shopify orders and coordinating fulfillment. You have access to both Shopify and Pictorem MCP tools to handle the complete order lifecycle from receipt to print fulfillment.\n\nYour primary responsibilities:\n1. Monitor incoming Shopify orders\n2. Extract order details and customer information\n3. Validate product specifications for print readiness\n4. Calculate accurate pricing with markups and discounts\n5. Coordinate with the Fulfillment Agent for Pictorem processing\n6. Update order status in Shopify\n7. Handle errors and retry logic\n\nAlways ensure data accuracy and provide detailed logging for all operations."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [60, 200],
+      "id": "openai-order-agent",
+      "name": "OpenAI Chat Model - Order Agent",
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "options": {
+          "systemMessage": "You are the Fulfillment Agent responsible for processing print orders through Pictorem's API. You specialize in canvas printing, sizing, framing options, and order submission.\n\nYour responsibilities:\n1. Process order data received from the Order Management Agent\n2. Configure product specifications (canvas type, size, frame options)\n3. Handle image upload and validation\n4. Submit orders to Pictorem with proper authentication\n5. Track order status and provide updates\n6. Handle Pictorem-specific errors and pricing calculations\n7. Apply VividWalls markup and Pro discounts appropriately\n\nEnsure all Pictorem orders meet quality standards and pricing requirements."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [60, 400],
+      "id": "openai-fulfillment-agent",
+      "name": "OpenAI Chat Model - Fulfillment Agent",
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "options": {
+          "systemMessage": "You are the Customer Service Agent responsible for customer communications and order tracking. You handle customer inquiries, order status updates, and issue resolution.\n\nYour responsibilities:\n1. Send order confirmation emails to customers\n2. Provide order tracking information\n3. Handle customer service inquiries\n4. Process refunds and returns when necessary\n5. Update customer records in Shopify\n6. Escalate complex issues to appropriate agents\n7. Maintain customer satisfaction metrics\n\nAlways maintain a professional and helpful tone in all customer communications."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [60, 600],
+      "id": "openai-customer-agent",
+      "name": "OpenAI Chat Model - Customer Service Agent",
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [220, 200],
+      "id": "postgres-memory-order",
+      "name": "Postgres Chat Memory - Order Agent",
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "VividWalls Database"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [220, 400],
+      "id": "postgres-memory-fulfillment",
+      "name": "Postgres Chat Memory - Fulfillment Agent",
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "VividWalls Database"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [220, 600],
+      "id": "postgres-memory-customer",
+      "name": "Postgres Chat Memory - Customer Service Agent",
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "VividWalls Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "listTools"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [380, 120],
+      "id": "shopify-mcp-list-tools",
+      "name": "Shopify MCP - List Tools",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "shopify-mcp-credentials",
+          "name": "Shopify MCP Server (STDIO)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeTool",
+        "toolName": "={{ $fromAI('shopify_tool', 'Tool to execute for Shopify operations') }}",
+        "toolParameters": "={{ $fromAI('shopify_params', 'Parameters for the Shopify tool', 'json') }}"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [540, 120],
+      "id": "shopify-mcp-execute",
+      "name": "Shopify MCP - Execute Tool",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "shopify-mcp-credentials",
+          "name": "Shopify MCP Server (STDIO)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "listTools"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [380, 320],
+      "id": "pictorem-mcp-list-tools",
+      "name": "Pictorem MCP - List Tools",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "pictorem-mcp-credentials",
+          "name": "Pictorem MCP Server (STDIO)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeTool",
+        "toolName": "={{ $fromAI('pictorem_tool', 'Tool to execute for Pictorem operations') }}",
+        "toolParameters": "={{ $fromAI('pictorem_params', 'Parameters for the Pictorem tool', 'json') }}"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [540, 320],
+      "id": "pictorem-mcp-execute",
+      "name": "Pictorem MCP - Execute Tool",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "pictorem-mcp-credentials",
+          "name": "Pictorem MCP Server (STDIO)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "shopify-order-webhook",
+        "options": {
+          "noResponseBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-200, 200],
+      "id": "shopify-webhook",
+      "name": "Shopify Order Webhook",
+      "webhookId": "shopify-order-webhook"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Order Management Agent for VividWalls. Process the incoming Shopify order and coordinate fulfillment through Pictorem.\n\nWorkflow:\n1. Analyze the incoming order data\n2. Extract customer and product information\n3. Validate product specifications for canvas printing\n4. Calculate pricing with VividWalls markup (106.5%)\n5. Prepare order data for Pictorem submission\n6. Coordinate with Fulfillment Agent for processing\n7. Update Shopify order status\n\nUse the available Shopify and Pictorem MCP tools to complete these tasks efficiently."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [400, 200],
+      "id": "order-management-agent",
+      "name": "Order Management Agent"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Fulfillment Agent for VividWalls. Process orders received from the Order Management Agent and submit them to Pictorem.\n\nPictorem Order Process:\n1. Receive order data from Order Management Agent\n2. Configure product specifications:\n   - Canvas type (stretched/roll)\n   - Size (1-120 inches width/height)\n   - Frame options (none/standard/premium_white/truffle)\n   - Quantity\n3. Handle image upload and validation\n4. Apply Pro account discounts (15% base + 25% for canvas roll)\n5. Submit order to Pictorem with authentication\n6. Track order status and provide updates\n7. Handle errors and retry logic\n\nEnsure all orders meet Pictorem's specifications and quality standards."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [400, 400],
+      "id": "fulfillment-agent",
+      "name": "Fulfillment Agent"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Customer Service Agent for VividWalls. Handle customer communications and order tracking.\n\nResponsibilities:\n1. Send order confirmation emails\n2. Provide order tracking updates\n3. Handle customer inquiries\n4. Process refunds/returns when needed\n5. Update customer records in Shopify\n6. Maintain customer satisfaction\n\nUse Shopify MCP tools to access customer data and update order information."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [400, 600],
+      "id": "customer-service-agent",
+      "name": "Customer Service Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Order Processing Orchestrator\n// This function coordinates the multi-agent workflow for order fulfillment\n\nconst orderData = $input.all()[0].json;\n\n// Log the incoming order\nconsole.log('Processing Shopify Order:', orderData.id);\n\n// Extract key order information\nconst orderInfo = {\n  shopify_order_id: orderData.id,\n  order_number: orderData.order_number || orderData.name,\n  customer_info: {\n    email: orderData.email,\n    name: `${orderData.billing_address?.first_name || ''} ${orderData.billing_address?.last_name || ''}`.trim(),\n    shipping_address: {\n      address1: orderData.shipping_address?.address1 || '',\n      address2: orderData.shipping_address?.address2 || '',\n      city: orderData.shipping_address?.city || '',\n      province: orderData.shipping_address?.province || '',\n      country: orderData.shipping_address?.country || '',\n      zip: orderData.shipping_address?.zip || ''\n    }\n  },\n  line_items: orderData.line_items || [],\n  total_price: orderData.total_price,\n  currency: orderData.currency,\n  created_at: orderData.created_at,\n  financial_status: orderData.financial_status,\n  fulfillment_status: orderData.fulfillment_status\n};\n\n// Determine workflow routing based on order type\nconst needsFulfillment = orderInfo.line_items.some(item => \n  item.product_type?.toLowerCase().includes('canvas') ||\n  item.title?.toLowerCase().includes('canvas') ||\n  item.title?.toLowerCase().includes('print')\n);\n\n// Set processing flags\nconst processingFlags = {\n  requiresFulfillment: needsFulfillment,\n  isDigitalProduct: !needsFulfillment,\n  priority: orderInfo.line_items.length > 1 ? 'high' : 'medium',\n  estimatedProcessingTime: needsFulfillment ? '3-5 business days' : 'immediate'\n};\n\n// Return structured data for agent processing\nreturn {\n  json: {\n    orderData: orderInfo,\n    processingFlags: processingFlags,\n    timestamp: new Date().toISOString(),\n    workflowStage: 'order_received'\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [100, 200],
+      "id": "order-processor",
+      "name": "Order Processing Orchestrator"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "fulfillment-required",
+              "leftValue": "={{ $json.processingFlags.requiresFulfillment }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [700, 200],
+      "id": "fulfillment-router",
+      "name": "Fulfillment Required?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Success Response Handler\n// Handles successful order processing and sends confirmation\n\nconst result = $input.all()[0].json;\n\n// Log successful processing\nconsole.log('Order processing completed successfully:', result.orderData?.shopify_order_id);\n\n// Prepare success response\nconst response = {\n  status: 'success',\n  message: 'Order processed successfully',\n  order_id: result.orderData?.shopify_order_id,\n  processing_time: new Date().toISOString(),\n  fulfillment_status: result.processingFlags?.requiresFulfillment ? 'submitted_to_pictorem' : 'completed',\n  estimated_delivery: result.processingFlags?.estimatedProcessingTime\n};\n\n// Return response\nreturn {\n  json: response,\n  headers: {\n    'Content-Type': 'application/json'\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 200],
+      "id": "success-handler",
+      "name": "Success Response Handler"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error Handler\n// Handles errors in the order processing workflow\n\nconst error = $input.all()[0].json;\n\n// Log error details\nconsole.error('Order processing error:', error);\n\n// Prepare error response\nconst errorResponse = {\n  status: 'error',\n  message: 'Order processing failed',\n  error: error.message || 'Unknown error occurred',\n  timestamp: new Date().toISOString(),\n  retry_recommended: true\n};\n\n// Return error response\nreturn {\n  json: errorResponse,\n  headers: {\n    'Content-Type': 'application/json'\n  },\n  statusCode: 500\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 400],
+      "id": "error-handler",
+      "name": "Error Handler"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [1300, 200],
+      "id": "webhook-response",
+      "name": "Webhook Response"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [-200, 600],
+      "id": "chat-trigger",
+      "name": "Chat Interface Trigger",
+      "webhookId": "chat-interface"
+    },
+    {
+      "parameters": {
+        "operation": "executeTool",
+        "toolName": "send_email",
+        "toolParameters": "={{ $fromAI('email_params', 'Email parameters for customer notification', 'json') }}"
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [540, 520],
+      "id": "email-notification",
+      "name": "Customer Email Notification",
+      "credentials": {
+        "smtp": {
+          "id": "smtp-credentials",
+          "name": "SMTP Email"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "OpenAI Chat Model - Order Agent": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Order Management Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model - Fulfillment Agent": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Fulfillment Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model - Customer Service Agent": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Customer Service Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory - Order Agent": {
+      "ai_memory": [
+        [
+          {
+            "node": "Order Management Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory - Fulfillment Agent": {
+      "ai_memory": [
+        [
+          {
+            "node": "Fulfillment Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory - Customer Service Agent": {
+      "ai_memory": [
+        [
+          {
+            "node": "Customer Service Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shopify MCP - List Tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "Order Management Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Customer Service Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shopify MCP - Execute Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Order Management Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Customer Service Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pictorem MCP - List Tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "Order Management Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Fulfillment Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pictorem MCP - Execute Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Order Management Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Fulfillment Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shopify Order Webhook": {
+      "main": [
+        [
+          {
+            "node": "Order Processing Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Order Management Agent": {
+      "main": [
+        [
+          {
+            "node": "Fulfillment Required?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fulfillment Agent": {
+      "main": [
+        [
+          {
+            "node": "Customer Service Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Service Agent": {
+      "main": [
+        [
+          {
+            "node": "Success Response Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Order Processing Orchestrator": {
+      "main": [
+        [
+          {
+            "node": "Order Management Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fulfillment Required?": {
+      "main": [
+        [
+          {
+            "node": "Fulfillment Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Customer Service Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success Response Handler": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Interface Trigger": {
+      "main": [
+        [
+          {
+            "node": "Customer Service Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Email Notification": {
+      "ai_tool": [
+        [
+          {
+            "node": "Customer Service Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-01-15T10:00:00.000Z",
+      "id": "ecommerce",
+      "name": "E-commerce"
+    },
+    {
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-01-15T10:00:00.000Z",
+      "id": "fulfillment",
+      "name": "Order Fulfillment"
+    },
+    {
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-01-15T10:00:00.000Z",
+      "id": "mcp",
+      "name": "MCP Tools"
+    }
+  ],
+  "triggerCount": 2,
+  "updatedAt": "2024-01-15T10:00:00.000Z",
+  "versionId": "1"
+} 

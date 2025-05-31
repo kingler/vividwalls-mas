@@ -1,0 +1,37 @@
+# Task ID: 1
+# Title: Setup Project Repository and Environment
+# Status: in-progress
+# Dependencies: None
+# Priority: high
+# Description: Initialize the FastMCP project repository with proper structure and environment configuration
+# Details:
+Create a new FastMCP project repository with the following structure: config/, src/, tests/, docs/. Set up a .env.example file with placeholders for all required API keys and database connection strings. Create a requirements.txt file including FastMCP, OpenAI, psycopg2-binary, pgvector, and other necessary dependencies. Initialize Git repository with appropriate .gitignore file.
+
+# Test Strategy:
+Verify project structure is correct and all configuration files are in place. Ensure environment can be set up following the .env.example template.
+
+# Subtasks:
+## 1. Initialize FastMCP project structure [done]
+### Dependencies: None
+### Description: Create the basic FastMCP server structure with server.py entry point
+### Details:
+Create mcp/color-psychology-mcp-server/ directory structure with proper Python package layout including __init__.py files
+
+## 2. Create requirements.txt with dependencies [done]
+### Dependencies: None
+### Description: Add all required Python dependencies for the project
+### Details:
+Include: fastmcp, openai, psycopg2-binary, pgvector, pillow, opencv-python, numpy, scikit-image, python-dotenv, aiohttp, loguru
+
+## 3. Create .env.example configuration [done]
+### Dependencies: None
+### Description: Create example environment configuration file
+### Details:
+Include: OPENAI_API_KEY, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DATABASE, LOG_LEVEL, DEBUG, VIVIDWALLS_CATALOG_PATH
+
+## 4. Implement modular logging system [in-progress]
+### Dependencies: None
+### Description: Create a Winston-style modular logging utility
+### Details:
+Create utils/logger.py with configurable log levels, file and console output, structured logging format, and integration with all modules
+

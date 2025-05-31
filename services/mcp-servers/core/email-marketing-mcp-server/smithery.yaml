@@ -1,0 +1,33 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - emailKey
+      - emailProvider
+    properties:
+      emailKey:
+        type: string
+        description: Email service provider API key (SendGrid or Mailchimp)
+      emailProvider:
+        type: string
+        enum: ["sendgrid", "mailchimp"]
+        description: Email service provider (sendgrid or mailchimp)
+        default: "sendgrid"
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({ 
+      command: 'python', 
+      args: [
+        'server.py', 
+        '--email-key', config.emailKey,
+        '--email-provider', config.emailProvider || 'sendgrid'
+      ] 
+    })
+  exampleConfig:
+    emailKey: "your_sendgrid_or_mailchimp_api_key_here"
+    emailProvider: "sendgrid"

@@ -1,0 +1,465 @@
+{
+  "name": "VividWalls Artwork Color Analysis & Extraction",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "artwork-color-analysis",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "artwork-webhook",
+      "name": "Artwork Analysis Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "vividwalls-artwork-color"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse incoming artwork data for color analysis\nconst body = $input.first().json.body;\n\n// Extract artwork information\nconst artworkId = body.artworkId || body.id || `artwork_${Date.now()}`;\nconst artworkTitle = body.title || 'Untitled Artwork';\nconst collection = body.collection || 'Unknown Collection';\nconst imageUrl = body.imageUrl || body.image_url || '';\nconst artist = body.artist || 'Unknown Artist';\nconst tags = body.tags || [];\nconst existingAnalysis = body.existingAnalysis || null;\n\n// Validate required fields\nif (!imageUrl || imageUrl.trim().length === 0) {\n  throw new Error('Image URL is required for color analysis');\n}\n\n// Prepare workflow data\nreturn {\n  artwork: {\n    id: artworkId,\n    title: artworkTitle,\n    collection: collection,\n    artist: artist,\n    imageUrl: imageUrl,\n    tags: tags\n  },\n  analysisRequest: {\n    timestamp: new Date().toISOString(),\n    requestId: `analysis_${Date.now()}`,\n    analysisType: body.analysisType || 'comprehensive',\n    skipExisting: body.skipExisting || false,\n    existingAnalysis: existingAnalysis\n  },\n  processingSteps: [\n    'color_extraction',\n    'mood_analysis',\n    'style_detection',\n    'room_recommendations',\n    'vector_embedding'\n  ]\n};"
+      },
+      "id": "parse-artwork-data",
+      "name": "Parse Artwork Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {
+          "systemMessage": "You are VividWalls Color Analysis AI, specialized in analyzing artwork images to extract comprehensive color information and psychological attributes.\n\n## YOUR ROLE:\nAnalyze artwork images to extract:\n- Dominant colors with precise hex codes and percentages\n- Color temperature and harmony analysis\n- Psychological mood and emotional impact\n- Recommended room types and spaces\n- Style compatibility and design recommendations\n\n## CRITICAL RULE: NO HUMANS OR ANIMALS\nYou must NEVER mention, describe, or acknowledge any humans, animals, or living creatures that might appear in the artwork. Focus ONLY on:\n- Colors, shapes, and patterns\n- Abstract elements and geometric forms\n- Landscapes, objects, and architectural elements\n- Textures and artistic techniques\n\n## COLOR EXTRACTION FRAMEWORK:\n\n### PRIMARY ANALYSIS:\n1. **Dominant Colors** (Top 5-7 colors)\n   - Exact hex codes\n   - Percentage of composition\n   - Color names (standardized)\n   - RGB values for processing\n\n2. **Color Temperature**\n   - Overall temperature: warm/cool/neutral\n   - Temperature balance percentage\n   - Specific warm and cool tones present\n\n3. **Color Harmony Type**\n   - Complementary\n   - Analogous\n   - Triadic\n   - Monochromatic\n   - Split-complementary\n   - Custom harmony description\n\n### PSYCHOLOGICAL ANALYSIS:\n\n1. **Primary Mood**\n   - Energizing: vibrant, stimulating, active\n   - Calming: peaceful, serene, relaxing\n   - Sophisticated: elegant, refined, mature\n   - Playful: fun, creative, youthful\n   - Dramatic: bold, striking, impactful\n   - Natural: organic, earthy, grounded\n\n2. **Emotional Impact**\n   - Psychological effects of color combinations\n   - Intended emotional response\n   - Subconscious associations\n\n3. **Atmosphere Creation**\n   - Type of environment it creates\n   - Energy level impact\n   - Focus/concentration effects\n\n### SPATIAL RECOMMENDATIONS:\n\n1. **Recommended Rooms**\n   - Living room: social, welcoming spaces\n   - Bedroom: restful, private spaces\n   - Office: productive, focused spaces\n   - Dining room: appetizing, social spaces\n   - Bathroom: refreshing, clean spaces\n   - Hallway: transitional, welcoming spaces\n\n2. **Space Considerations**\n   - Natural light requirements\n   - Room size recommendations\n   - Wall placement suggestions\n\n### STYLE COMPATIBILITY:\n\n1. **Design Styles**\n   - Modern/Contemporary\n   - Traditional/Classic\n   - Industrial/Urban\n   - Farmhouse/Rustic\n   - Minimalist/Scandinavian\n   - Maximalist/Eclectic\n   - Transitional\n\n2. **Complementary Elements**\n   - Furniture styles that match\n   - Textile recommendations\n   - Accent color suggestions\n\n## OUTPUT FORMAT:\n```json\n{\n  \"colorAnalysis\": {\n    \"dominantColors\": [\n      {\n        \"hex\": \"#1A5F7A\",\n        \"name\": \"Deep Ocean Blue\",\n        \"percentage\": 35,\n        \"rgb\": {\"r\": 26, \"g\": 95, \"b\": 122},\n        \"category\": \"cool\"\n      }\n    ],\n    \"colorTemperature\": {\n      \"overall\": \"cool\",\n      \"warmPercentage\": 20,\n      \"coolPercentage\": 80,\n      \"balance\": \"predominantly cool with warm accents\"\n    },\n    \"colorHarmony\": {\n      \"type\": \"complementary\",\n      \"description\": \"Strong contrast between blue and orange tones\",\n      \"harmonyScore\": 0.85\n    },\n    \"contrastLevel\": \"high\",\n    \"saturationLevel\": \"medium\",\n    \"brightnessLevel\": \"medium-low\"\n  },\n  \"psychologicalProfile\": {\n    \"primaryMood\": \"calming\",\n    \"secondaryMood\": \"sophisticated\",\n    \"emotionalImpact\": [\n      \"promotes relaxation\",\n      \"encourages contemplation\",\n      \"creates sense of depth\"\n    ],\n    \"psychologicalEffects\": [\n      \"reduces stress\",\n      \"enhances focus\",\n      \"promotes creativity\"\n    ],\n    \"atmosphereType\": \"serene professional\"\n  },\n  \"spatialRecommendations\": {\n    \"recommendedRooms\": [\"office\", \"bedroom\", \"study\"],\n    \"avoidRooms\": [\"kitchen\", \"playroom\"],\n    \"lightingRequirements\": \"works well with natural and warm artificial light\",\n    \"spaceSizeRecommendation\": \"ideal for medium to large spaces\",\n    \"wallPlacement\": [\"focal wall\", \"behind desk\", \"above bed\"]\n  },\n  \"styleCompatibility\": {\n    \"primaryStyles\": [\"modern\", \"contemporary\", \"minimalist\"],\n    \"secondaryStyles\": [\"transitional\", \"scandinavian\"],\n    \"furnitureRecommendations\": [\n      \"clean-lined modern furniture\",\n      \"light wood accents\",\n      \"metallic fixtures\"\n    ],\n    \"textileColors\": [\"white\", \"light gray\", \"navy\"],\n    \"accentColors\": [\"gold\", \"coral\", \"sage green\"]\n  },\n  \"searchKeywords\": [\n    \"calming blue artwork\",\n    \"modern abstract\",\n    \"office wall art\",\n    \"sophisticated decor\"\n  ],\n  \"confidenceScore\": 0.92,\n  \"analysisNotes\": \"Professional analysis focusing on color psychology and spatial harmony\"\n}\n```"
+        },
+        "prompt": "=Analyze this VividWalls artwork image for comprehensive color extraction and psychological profiling:\n\nArtwork Details:\n- Title: {{ $json.artwork.title }}\n- Collection: {{ $json.artwork.collection }}\n- Artist: {{ $json.artwork.artist }}\n- Image URL: {{ $json.artwork.imageUrl }}\n\nPlease provide a detailed color analysis including:\n1. Extract all dominant colors with exact hex codes and percentages\n2. Analyze color temperature and harmony\n3. Determine psychological mood and emotional impact\n4. Recommend suitable room types and spaces\n5. Identify compatible design styles\n\nREMEMBER: Focus ONLY on colors, patterns, shapes, and abstract elements. Never mention any humans, animals, or living creatures.",
+        "model": "gpt-4o",
+        "options": {
+          "imageUrls": "={{ [$json.artwork.imageUrl] }}"
+        }
+      },
+      "id": "analyze-artwork-colors",
+      "name": "Analyze Artwork Colors (Vision API)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process color analysis results\nconst aiResponse = $input.first().json.choices?.[0]?.message?.content || '';\nconst artworkData = $('parse-artwork-data').first().json;\n\n// Parse JSON response from AI\nlet colorAnalysis;\ntry {\n  const jsonMatch = aiResponse.match(/```json\\s*([\\s\\S]*?)\\s*```/) || aiResponse.match(/{[\\s\\S]*}/);\n  if (jsonMatch) {\n    colorAnalysis = JSON.parse(jsonMatch[1] || jsonMatch[0]);\n  } else {\n    throw new Error('No valid JSON found in AI response');\n  }\n} catch (error) {\n  console.error('Error parsing AI response:', error);\n  // Create fallback analysis\n  colorAnalysis = {\n    colorAnalysis: {\n      dominantColors: [\n        {hex: '#808080', name: 'Gray', percentage: 100, category: 'neutral'}\n      ],\n      colorTemperature: {overall: 'neutral'},\n      colorHarmony: {type: 'monochromatic'}\n    },\n    psychologicalProfile: {\n      primaryMood: 'neutral',\n      emotionalImpact: ['balanced']\n    },\n    spatialRecommendations: {\n      recommendedRooms: ['any']\n    },\n    confidenceScore: 0.5,\n    analysisNotes: 'Fallback analysis due to processing error'\n  };\n}\n\n// Prepare data for database storage\nconst dbData = {\n  // Artwork identification\n  artworkId: artworkData.artwork.id,\n  artworkTitle: artworkData.artwork.title,\n  collection: artworkData.artwork.collection,\n  artist: artworkData.artwork.artist,\n  imageUrl: artworkData.artwork.imageUrl,\n  \n  // Color analysis results\n  dominantColors: colorAnalysis.colorAnalysis.dominantColors,\n  colorTemperature: colorAnalysis.colorAnalysis.colorTemperature,\n  colorHarmony: colorAnalysis.colorAnalysis.colorHarmony,\n  contrastLevel: colorAnalysis.colorAnalysis.contrastLevel || 'medium',\n  saturationLevel: colorAnalysis.colorAnalysis.saturationLevel || 'medium',\n  brightnessLevel: colorAnalysis.colorAnalysis.brightnessLevel || 'medium',\n  \n  // Psychological profile\n  primaryMood: colorAnalysis.psychologicalProfile.primaryMood,\n  secondaryMood: colorAnalysis.psychologicalProfile.secondaryMood || null,\n  emotionalImpact: colorAnalysis.psychologicalProfile.emotionalImpact,\n  psychologicalEffects: colorAnalysis.psychologicalProfile.psychologicalEffects || [],\n  atmosphereType: colorAnalysis.psychologicalProfile.atmosphereType || null,\n  \n  // Spatial recommendations\n  recommendedRooms: colorAnalysis.spatialRecommendations.recommendedRooms,\n  avoidRooms: colorAnalysis.spatialRecommendations.avoidRooms || [],\n  lightingRequirements: colorAnalysis.spatialRecommendations.lightingRequirements || null,\n  spaceSizeRecommendation: colorAnalysis.spatialRecommendations.spaceSizeRecommendation || null,\n  wallPlacement: colorAnalysis.spatialRecommendations.wallPlacement || [],\n  \n  // Style compatibility\n  styleCompatibility: colorAnalysis.styleCompatibility || {},\n  searchKeywords: colorAnalysis.searchKeywords || [],\n  \n  // Analysis metadata\n  analysisTimestamp: new Date().toISOString(),\n  analysisVersion: '1.0',\n  confidenceScore: colorAnalysis.confidenceScore,\n  analysisNotes: colorAnalysis.analysisNotes || ''\n};\n\n// Prepare embedding text for vector search\nconst embeddingText = [\n  artworkData.artwork.title,\n  artworkData.artwork.collection,\n  dbData.primaryMood,\n  dbData.secondaryMood,\n  ...dbData.dominantColors.map(c => c.name),\n  ...dbData.recommendedRooms,\n  ...dbData.searchKeywords,\n  dbData.atmosphereType\n].filter(Boolean).join(' ');\n\nreturn {\n  artworkData: artworkData,\n  colorAnalysis: colorAnalysis,\n  databaseData: dbData,\n  embeddingText: embeddingText,\n  processingStep: 'analysis_complete'\n};"
+      },
+      "id": "process-color-analysis",
+      "name": "Process Color Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "model": "text-embedding-3-small",
+        "options": {},
+        "text": "={{ $json.embeddingText }}"
+      },
+      "id": "generate-embedding",
+      "name": "Generate Embedding",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1120, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-api",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Check if artwork already exists\nSELECT id, analysis_status, analyzed_at\nFROM artwork\nWHERE id = $1\nLIMIT 1;",
+        "additionalFields": {
+          "mode": "list",
+          "values": {
+            "value1": "={{ $('process-color-analysis').first().json.databaseData.artworkId }}"
+          }
+        }
+      },
+      "id": "check-existing-artwork",
+      "name": "Check Existing Artwork",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 200],
+      "credentials": {
+        "postgres": {
+          "id": "vividwalls-postgres",
+          "name": "VividWalls PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Insert or update artwork with color analysis\nINSERT INTO artwork (\n    id, title, artist, collection, \n    description, image_url, thumbnail_url,\n    dominant_colors, color_temperature, color_harmony,\n    mood_attributes, recommended_spaces, style_attributes,\n    color_embedding, style_embedding,\n    analysis_status, analyzed_at, analysis_confidence,\n    tags, metadata, availability, price\n) VALUES (\n    $1, $2, $3, $4,\n    $5, $6, $7,\n    $8::jsonb, $9, $10::jsonb,\n    $11::text[], $12::text[], $13::jsonb,\n    $14::vector(1536), NULL,\n    'completed'::analysis_status, NOW(), $15,\n    $16::text[], $17::jsonb, true, 0\n)\nON CONFLICT (id) DO UPDATE SET\n    dominant_colors = EXCLUDED.dominant_colors,\n    color_temperature = EXCLUDED.color_temperature,\n    color_harmony = EXCLUDED.color_harmony,\n    mood_attributes = EXCLUDED.mood_attributes,\n    recommended_spaces = EXCLUDED.recommended_spaces,\n    style_attributes = EXCLUDED.style_attributes,\n    color_embedding = EXCLUDED.color_embedding,\n    analysis_status = EXCLUDED.analysis_status,\n    analyzed_at = EXCLUDED.analyzed_at,\n    analysis_confidence = EXCLUDED.analysis_confidence,\n    updated_at = NOW()\nRETURNING *;",
+        "additionalFields": {
+          "mode": "list",
+          "values": {
+            "value1": "={{ $('process-color-analysis').first().json.databaseData.artworkId }}",
+            "value2": "={{ $('process-color-analysis').first().json.databaseData.artworkTitle }}",
+            "value3": "={{ $('process-color-analysis').first().json.databaseData.artist }}",
+            "value4": "={{ $('process-color-analysis').first().json.databaseData.collection }}",
+            "value5": "={{ $('process-color-analysis').first().json.databaseData.artworkTitle }} - {{ $('process-color-analysis').first().json.databaseData.collection }}",
+            "value6": "={{ $('process-color-analysis').first().json.databaseData.imageUrl }}",
+            "value7": "={{ $('process-color-analysis').first().json.databaseData.imageUrl }}",
+            "value8": "={{ JSON.stringify($('process-color-analysis').first().json.databaseData.dominantColors) }}",
+            "value9": "={{ $('process-color-analysis').first().json.databaseData.colorTemperature.overall }}",
+            "value10": "={{ JSON.stringify($('process-color-analysis').first().json.databaseData.colorHarmony) }}",
+            "value11": "={{ $('process-color-analysis').first().json.databaseData.emotionalImpact }}",
+            "value12": "={{ $('process-color-analysis').first().json.databaseData.recommendedRooms }}",
+            "value13": "={{ JSON.stringify($('process-color-analysis').first().json.databaseData.styleCompatibility) }}",
+            "value14": "={{ $('generate-embedding').first().json.data[0].embedding }}",
+            "value15": "={{ $('process-color-analysis').first().json.databaseData.confidenceScore }}",
+            "value16": "={{ $('process-color-analysis').first().json.databaseData.searchKeywords }}",
+            "value17": "={{ JSON.stringify({ analysisVersion: $('process-color-analysis').first().json.databaseData.analysisVersion, analysisNotes: $('process-color-analysis').first().json.databaseData.analysisNotes }) }}"
+          }
+        }
+      },
+      "id": "store-artwork-analysis",
+      "name": "Store Artwork Analysis",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1560, 300],
+      "credentials": {
+        "postgres": {
+          "id": "vividwalls-postgres",
+          "name": "VividWalls PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Log color analysis event\nINSERT INTO analysis_logs (\n    artwork_id,\n    analysis_type,\n    analysis_data,\n    confidence_score,\n    processing_time_ms,\n    created_at\n) VALUES (\n    $1,\n    'color_extraction',\n    $2::jsonb,\n    $3,\n    $4,\n    NOW()\n);",
+        "additionalFields": {
+          "mode": "list",
+          "values": {
+            "value1": "={{ $('process-color-analysis').first().json.databaseData.artworkId }}",
+            "value2": "={{ JSON.stringify($('process-color-analysis').first().json.colorAnalysis) }}",
+            "value3": "={{ $('process-color-analysis').first().json.databaseData.confidenceScore }}",
+            "value4": "={{ Date.now() - new Date($('process-color-analysis').first().json.artworkData.analysisRequest.timestamp).getTime() }}"
+          }
+        }
+      },
+      "id": "log-analysis-event",
+      "name": "Log Analysis Event",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 400],
+      "credentials": {
+        "postgres": {
+          "id": "vividwalls-postgres",
+          "name": "VividWalls PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare response with analysis results\nconst analysisData = $('process-color-analysis').first().json;\nconst storedArtwork = $('store-artwork-analysis').first().json;\n\n// Calculate processing metrics\nconst startTime = new Date(analysisData.artworkData.analysisRequest.timestamp).getTime();\nconst endTime = Date.now();\nconst processingTime = endTime - startTime;\n\n// Build comprehensive response\nconst response = {\n  success: true,\n  artwork: {\n    id: analysisData.databaseData.artworkId,\n    title: analysisData.databaseData.artworkTitle,\n    collection: analysisData.databaseData.collection,\n    artist: analysisData.databaseData.artist,\n    imageUrl: analysisData.databaseData.imageUrl\n  },\n  colorAnalysis: {\n    dominantColors: analysisData.databaseData.dominantColors,\n    colorTemperature: analysisData.databaseData.colorTemperature,\n    colorHarmony: analysisData.databaseData.colorHarmony,\n    contrastLevel: analysisData.databaseData.contrastLevel,\n    saturationLevel: analysisData.databaseData.saturationLevel,\n    brightnessLevel: analysisData.databaseData.brightnessLevel\n  },\n  psychologicalProfile: {\n    primaryMood: analysisData.databaseData.primaryMood,\n    secondaryMood: analysisData.databaseData.secondaryMood,\n    emotionalImpact: analysisData.databaseData.emotionalImpact,\n    psychologicalEffects: analysisData.databaseData.psychologicalEffects,\n    atmosphereType: analysisData.databaseData.atmosphereType\n  },\n  recommendations: {\n    recommendedRooms: analysisData.databaseData.recommendedRooms,\n    avoidRooms: analysisData.databaseData.avoidRooms,\n    lightingRequirements: analysisData.databaseData.lightingRequirements,\n    spaceSizeRecommendation: analysisData.databaseData.spaceSizeRecommendation,\n    wallPlacement: analysisData.databaseData.wallPlacement,\n    styleCompatibility: analysisData.databaseData.styleCompatibility\n  },\n  searchMetadata: {\n    keywords: analysisData.databaseData.searchKeywords,\n    embeddingGenerated: true,\n    vectorDimensions: 1536\n  },\n  analysisMetadata: {\n    timestamp: analysisData.databaseData.analysisTimestamp,\n    version: analysisData.databaseData.analysisVersion,\n    confidenceScore: analysisData.databaseData.confidenceScore,\n    processingTimeMs: processingTime,\n    analysisNotes: analysisData.databaseData.analysisNotes\n  },\n  databaseStatus: {\n    stored: true,\n    recordId: storedArtwork[0]?.id || analysisData.databaseData.artworkId,\n    analysisStatus: 'completed'\n  }\n};\n\nreturn response;"
+      },
+      "id": "prepare-response",
+      "name": "Prepare Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Analysis-Version",
+                "value": "1.0"
+              },
+              {
+                "name": "X-Processing-Time",
+                "value": "={{ $json.analysisMetadata.processingTimeMs }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "send-response",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bulk-artwork-analysis",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "bulk-analysis-webhook",
+      "name": "Bulk Analysis Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 500],
+      "webhookId": "vividwalls-bulk-color"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse bulk analysis request\nconst body = $input.first().json.body;\nconst artworks = body.artworks || [];\n\nif (!Array.isArray(artworks) || artworks.length === 0) {\n  throw new Error('Artworks array is required for bulk analysis');\n}\n\n// Prepare individual artwork items for processing\nconst items = artworks.map(artwork => ({\n  json: {\n    artworkId: artwork.id || artwork.artworkId,\n    title: artwork.title,\n    collection: artwork.collection,\n    artist: artwork.artist,\n    imageUrl: artwork.imageUrl || artwork.image_url,\n    tags: artwork.tags || [],\n    priority: artwork.priority || 'normal'\n  }\n}));\n\nreturn items;"
+      },
+      "id": "prepare-bulk-items",
+      "name": "Prepare Bulk Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 500]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-batch",
+      "name": "Split Batch",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 500]
+    },
+    {
+      "parameters": {
+        "url": "=https://n8n.vividwalls.blog/webhook/artwork-color-analysis",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "artworkId",
+              "value": "={{ $json.artworkId }}"
+            },
+            {
+              "name": "title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "collection",
+              "value": "={{ $json.collection }}"
+            },
+            {
+              "name": "artist",
+              "value": "={{ $json.artist }}"
+            },
+            {
+              "name": "imageUrl",
+              "value": "={{ $json.imageUrl }}"
+            },
+            {
+              "name": "tags",
+              "value": "={{ $json.tags }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "call-single-analysis",
+      "name": "Call Single Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate bulk analysis results\nconst allResults = $input.all();\n\nconst summary = {\n  totalRequested: allResults.length,\n  successful: 0,\n  failed: 0,\n  results: [],\n  errors: []\n};\n\nallResults.forEach(result => {\n  const data = result.json;\n  if (data.success) {\n    summary.successful++;\n    summary.results.push({\n      artworkId: data.artwork.id,\n      title: data.artwork.title,\n      status: 'completed',\n      confidenceScore: data.analysisMetadata.confidenceScore,\n      primaryMood: data.psychologicalProfile.primaryMood,\n      dominantColor: data.colorAnalysis.dominantColors[0]\n    });\n  } else {\n    summary.failed++;\n    summary.errors.push({\n      artworkId: data.artworkId || 'unknown',\n      error: data.error || 'Unknown error'\n    });\n  }\n});\n\nsummary.completionRate = (summary.successful / summary.totalRequested) * 100;\nsummary.timestamp = new Date().toISOString();\n\nreturn summary;"
+      },
+      "id": "aggregate-bulk-results",
+      "name": "Aggregate Bulk Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 500]
+    }
+  ],
+  "connections": {
+    "Artwork Analysis Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Artwork Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Artwork Data": {
+      "main": [
+        [
+          {
+            "node": "Analyze Artwork Colors (Vision API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Artwork Colors (Vision API)": {
+      "main": [
+        [
+          {
+            "node": "Process Color Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Color Analysis": {
+      "main": [
+        [
+          {
+            "node": "Generate Embedding",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Existing Artwork",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Embedding": {
+      "main": [
+        [
+          {
+            "node": "Store Artwork Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing Artwork": {
+      "main": [
+        [
+          {
+            "node": "Log Analysis Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Artwork Analysis": {
+      "main": [
+        [
+          {
+            "node": "Prepare Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Response": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bulk Analysis Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Bulk Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Bulk Items": {
+      "main": [
+        [
+          {
+            "node": "Split Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Batch": {
+      "main": [
+        [
+          {
+            "node": "Call Single Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate Bulk Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Single Analysis": {
+      "main": [
+        [
+          {
+            "node": "Split Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-05-31T12:00:00.000Z",
+      "updatedAt": "2025-05-31T12:00:00.000Z",
+      "id": "vividwalls",
+      "name": "VividWalls"
+    },
+    {
+      "createdAt": "2025-05-31T12:00:00.000Z",
+      "updatedAt": "2025-05-31T12:00:00.000Z",
+      "id": "color-analysis",
+      "name": "Color Analysis"
+    },
+    {
+      "createdAt": "2025-05-31T12:00:00.000Z",
+      "updatedAt": "2025-05-31T12:00:00.000Z",
+      "id": "ai-vision",
+      "name": "AI Vision"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-05-31T12:00:00.000Z",
+  "versionId": "1"
+} 

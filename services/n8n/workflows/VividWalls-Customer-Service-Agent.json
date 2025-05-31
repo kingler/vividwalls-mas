@@ -1,0 +1,673 @@
+{
+  "meta": {
+    "instanceId": "vividwalls-customer-service-agent"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customer-support",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "aa1b2334-bc12-4d34-ef56-bc7e8e9f0a1b",
+      "name": "Customer Support Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "customer-support-webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "support_context",
+              "name": "support_context",
+              "value": "{\n  \"agent_role\": \"Customer Service Agent\",\n  \"business_context\": \"VividWalls Premium Customer Experience\",\n  \"mission\": \"Deliver exceptional support that reinforces VividWalls' premium brand positioning while resolving issues efficiently\",\n  \"service_standards\": {\n    \"response_time\": \"< 2 hours during business hours\",\n    \"resolution_rate\": \"> 95% first contact\",\n    \"customer_satisfaction\": \"> 98%\",\n    \"brand_protection\": \"100% premium experience\"\n  },\n  \"escalation_triggers\": [\n    \"vip_customer_issues\",\n    \"quality_concerns\",\n    \"order_value_over_$500\",\n    \"negative_sentiment_high\",\n    \"refund_requests\"\n  ]\n}",
+              "type": "object"
+            },
+            {
+              "id": "customer_inquiry",
+              "name": "customer_inquiry",
+              "value": "={{ $json.body.message }}",
+              "type": "string"
+            },
+            {
+              "id": "customer_id",
+              "name": "customer_id",
+              "value": "={{ $json.body.customer_id }}",
+              "type": "string"
+            },
+            {
+              "id": "inquiry_type",
+              "name": "inquiry_type",
+              "value": "={{ $json.body.inquiry_type || 'general' }}",
+              "type": "string"
+            },
+            {
+              "id": "priority_level",
+              "name": "priority_level",
+              "value": "={{ $json.body.priority || 'medium' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bb2c3445-cd23-4e45-fg67-cd8f9f0g1b2c",
+      "name": "Process Support Request",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "vip_customer",
+              "leftValue": "={{ $json.customer_id }}",
+              "rightValue": "vip_",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith",
+                "rightType": "string"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "cc3d4556-de34-4f56-gh78-de9g0g1h2c3d",
+      "name": "Check Customer Priority",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [740, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://localhost:5678/webhook/shopify/customer-profile/={{ $json.customer_id }}",
+        "options": {}
+      },
+      "id": "dd4e5667-ef45-4g67-hi89-ef0h1h2i3d4e",
+      "name": "Get Customer Profile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [980, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://localhost:5678/webhook/shopify/customer-orders/={{ $json.customer_id }}",
+        "options": {}
+      },
+      "id": "ee5f6778-fg56-4h78-ij90-fg1i2i3j4e5f",
+      "name": "Get Order History",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [980, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Advanced sentiment analysis and issue classification\nconst customerInquiry = $input.item.json.customer_inquiry;\nconst customerProfile = $input.item.json.customer_profile;\nconst orderHistory = $input.item.json.order_history;\n\n// Sentiment analysis keywords\nconst sentimentIndicators = {\n  negative: ['disappointed', 'frustrated', 'angry', 'terrible', 'horrible', 'worst', 'unacceptable', 'refund', 'cancel'],\n  neutral: ['question', 'inquiry', 'wondering', 'curious', 'information', 'help', 'assistance'],\n  positive: ['love', 'amazing', 'beautiful', 'perfect', 'excellent', 'wonderful', 'impressed']\n};\n\n// Issue type classification\nconst issueKeywords = {\n  quality: ['quality', 'damaged', 'defect', 'color', 'print', 'frame', 'scratched', 'bent'],\n  shipping: ['shipping', 'delivery', 'tracking', 'delayed', 'lost', 'damaged in transit'],\n  billing: ['charge', 'payment', 'refund', 'price', 'billing', 'invoice', 'cost'],\n  product: ['size', 'description', 'expected', 'different', 'wrong item', 'not as shown'],\n  general: ['question', 'information', 'how to', 'when will', 'status']\n};\n\n// Analyze sentiment\nlet sentimentScore = 0;\nlet detectedSentiment = 'neutral';\n\nfor (const [sentiment, keywords] of Object.entries(sentimentIndicators)) {\n  const matches = keywords.filter(keyword => \n    customerInquiry.toLowerCase().includes(keyword.toLowerCase())\n  ).length;\n  \n  if (sentiment === 'negative' && matches > 0) {\n    sentimentScore = -matches;\n    detectedSentiment = 'negative';\n  } else if (sentiment === 'positive' && matches > 0 && sentimentScore >= 0) {\n    sentimentScore = matches;\n    detectedSentiment = 'positive';\n  }\n}\n\n// Classify issue type\nlet detectedIssueType = 'general';\nlet maxMatches = 0;\n\nfor (const [issueType, keywords] of Object.entries(issueKeywords)) {\n  const matches = keywords.filter(keyword => \n    customerInquiry.toLowerCase().includes(keyword.toLowerCase())\n  ).length;\n  \n  if (matches > maxMatches) {\n    maxMatches = matches;\n    detectedIssueType = issueType;\n  }\n}\n\n// Calculate customer value tier\nconst totalSpent = orderHistory?.total_spent || 0;\nconst orderCount = orderHistory?.orders_count || 0;\nconst avgOrderValue = orderCount > 0 ? totalSpent / orderCount : 0;\n\nconst customerTier = totalSpent > 1000 ? 'vip' :\n                   totalSpent > 500 ? 'premium' :\n                   totalSpent > 100 ? 'standard' : 'new';\n\n// Determine urgency level\nconst urgencyFactors = {\n  vip_customer: customerTier === 'vip' ? 3 : 0,\n  negative_sentiment: sentimentScore < -2 ? 3 : sentimentScore < 0 ? 1 : 0,\n  quality_issue: detectedIssueType === 'quality' ? 2 : 0,\n  high_value: avgOrderValue > 300 ? 1 : 0,\n  repeat_customer: orderCount > 3 ? 1 : 0\n};\n\nconst urgencyScore = Object.values(urgencyFactors).reduce((sum, score) => sum + score, 0);\nconst urgencyLevel = urgencyScore >= 6 ? 'critical' :\n                   urgencyScore >= 4 ? 'high' :\n                   urgencyScore >= 2 ? 'medium' : 'low';\n\nreturn {\n  analysis_results: {\n    sentiment: detectedSentiment,\n    sentiment_score: sentimentScore,\n    issue_type: detectedIssueType,\n    issue_keywords_matched: maxMatches,\n    customer_tier: customerTier,\n    urgency_level: urgencyLevel,\n    urgency_score: urgencyScore,\n    urgency_factors: urgencyFactors\n  },\n  customer_insights: {\n    total_spent: totalSpent,\n    order_count: orderCount,\n    avg_order_value: avgOrderValue,\n    customer_since: customerProfile?.created_at,\n    last_order: orderHistory?.last_order_date\n  },\n  next_action: urgencyLevel === 'critical' ? 'escalate_immediately' :\n              urgencyLevel === 'high' ? 'priority_response' : 'standard_response'\n};"
+        },
+        "options": {}
+      },
+      "id": "ff6g7889-gh67-4i89-jk01-gh2j3j4k5f6g",
+      "name": "Analyze Customer Inquiry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "critical_urgency",
+              "leftValue": "={{ $json.analysis_results.urgency_level }}",
+              "rightValue": "critical",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "rightType": "string"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "gg7h8990-hi78-4j90-kl12-hi3k4k5l6g7h",
+      "name": "Check Escalation Needed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "qwen2.5:32b"
+            },
+            {
+              "name": "messages",
+              "value": "[\n  {\n    \"role\": \"system\",\n    \"content\": \"# Customer Service Agent - VividWalls Premium Support\\n\\nYou are the Customer Service Agent for VividWalls, delivering exceptional support experiences that reinforce our premium brand positioning while efficiently resolving customer inquiries.\\n\\n## CORE MISSION & BRAND POSITIONING\\nProvide white-glove customer service that reflects VividWalls' commitment to premium quality, exclusive art, and exceptional customer experiences. Every interaction should strengthen customer loyalty and protect our brand reputation.\\n\\n## BUSINESS CONTEXT\\nVividWalls (vividwalls.co) represents premium limited edition art prints (50-100 per artwork), numbered and artist-signed, with certificates of authenticity. Our customers are art collectors, interior designers, and investment buyers who expect exceptional service quality.\\n\\n**Key Brand Principles:**\\n- Premium positioning: Gallery-quality standards in all interactions\\n- Exclusivity: Limited editions create inherent value and urgency\\n- Investment value: Artworks appreciate through scarcity and quality\\n- White-glove service: Every customer feels valued and VIP-treated\\n\\n## CUSTOMER SERVICE PHILOSOPHY\\n\\n### Premium Service Standards\\n```\\nResponse Excellence:\\n- Acknowledge premium investment in our art\\n- Demonstrate deep product knowledge\\n- Offer solutions that exceed expectations\\n- Maintain professional, warm, knowledgeable tone\\n\\nBrand Protection:\\n- Never compromise on quality standards\\n- Admit fault gracefully when appropriate\\n- Turn problems into loyalty-building opportunities\\n- Reinforce value proposition in every interaction\\n\\nCustomer Empowerment:\\n- Provide complete information proactively\\n- Offer multiple solution options\\n- Respect customer's investment and expectations\\n- Follow up to ensure satisfaction\\n```\\n\\n## ISSUE RESOLUTION FRAMEWORK\\n\\n### Quality Issues (Zero Tolerance)\\n```\\nImmediate Response Protocol:\\n1. Acknowledge the unacceptable quality\\n2. Express genuine concern for their experience\\n3. Offer immediate replacement at no cost\\n4. Provide expedited shipping (2-3 day rush)\\n5. Include upgrade options (larger size, premium frame)\\n6. Follow up personally within 48 hours\\n\\nSample Response:\\n\\\"I sincerely apologize that your limited edition print didn't meet our gallery-quality standards. This is completely unacceptable, and I'm personally ensuring this is made right immediately. I'm arranging a replacement with expedited production and will include a complimentary upgrade to our premium floating frame system. You'll have tracking information within 2 hours.\\\"\\n```\\n\\n### Shipping Concerns\\n```\\nProactive Communication:\\n1. Provide real-time tracking updates\\n2. Explain our protective packaging process\\n3. Set clear delivery expectations\\n4. Offer delivery date guarantees when possible\\n5. Coordinate special delivery instructions\\n\\nDelay Management:\\n1. Notify proactively before customer inquires\\n2. Provide specific updated timeline\\n3. Offer compensation (discount on future order)\\n4. Expedite replacement if damaged in transit\\n```\\n\\n### Billing and Payment Issues\\n```\\nTransparency and Trust:\\n1. Explain charges clearly and completely\\n2. Provide detailed invoice breakdowns\\n3. Offer flexible payment solutions\\n4. Process refunds efficiently (3-5 business days)\\n5. Honor pricing errors in customer's favor\\n```\\n\\n### Product Information Requests\\n```\\nEducational Excellence:\\n1. Provide comprehensive artwork details\\n2. Share artist background and inspiration\\n3. Explain limited edition value proposition\\n4. Discuss investment potential and care instructions\\n5. Offer size and placement recommendations\\n```\\n\\n## CUSTOMER TIER MANAGEMENT\\n\\n### VIP Customers ($1000+ lifetime value)\\n```\\nWhite-Glove Treatment:\\n- Immediate response (within 30 minutes during business hours)\\n- Direct phone contact option\\n- Personal account manager introduction\\n- Exclusive previews of new collections\\n- Complimentary services (framing upgrades, express shipping)\\n- Annual appreciation gifts or experiences\\n```\\n\\n### Premium Customers ($500-$999 lifetime value)\\n```\\nEnhanced Service:\\n- Priority response (within 1 hour)\\n- Detailed product consultations\\n- Early access to new releases\\n- Preferred customer discounts\\n- Expedited issue resolution\\n```\\n\\n### Standard Customers ($100-$499 lifetime value)\\n```\\nProfessional Excellence:\\n- Standard response time (within 2 hours)\\n- Complete information and solutions\\n- Education about VividWalls value\\n- Encouragement toward premium tier benefits\\n```\\n\\n### New Customers (< $100 spent)\\n```\\nWelcome Experience:\\n- Educational approach about limited editions\\n- Value proposition explanation\\n- Quality guarantee reinforcement\\n- Invitation to explore collections\\n```\\n\\n## COMMUNICATION TEMPLATES\\n\\n### Quality Issue Resolution\\n```\\n\\\"I understand how disappointing this must be, especially given your investment in this exclusive piece. Our gallery-quality standards clearly weren't met here, and I take full responsibility for ensuring this is corrected immediately.\\n\\nHere's what I'm doing right now:\\n1. Arranging immediate replacement with priority production\\n2. Including expedited shipping at no charge\\n3. Adding a complimentary upgrade [specific upgrade]\\n4. Personal quality check before shipment\\n\\nYou'll receive tracking information within 2 hours, and I'll personally follow up to ensure your complete satisfaction. This experience doesn't represent our usual standards, and I'm committed to making it right.\\\"\\n```\\n\\n### Shipping Delay Communication\\n```\\n\\\"I wanted to personally update you on your limited edition print order. Due to [specific reason], your piece will be delivered [new date] rather than the original [original date].\\n\\nTo apologize for this delay:\\n- I've upgraded your shipping to express at no charge\\n- Applied a 15% discount to your next order\\n- Personally monitoring your piece through production\\n\\nYour investment in this exclusive artwork is important to us, and I'm ensuring it receives the attention it deserves. Please let me know if you have any questions or concerns.\\\"\\n```\\n\\n### Product Information Excellence\\n```\\n\\\"I'm excited to share details about this exceptional piece! [Artwork title] is part of our exclusive limited edition series, with only [number] prints ever created.\\n\\nArtwork Details:\\n- Artist: [Name] - [brief background]\\n- Edition: #[number] of [total]\\n- Materials: Archival canvas with pigment inks (100+ year lifespan)\\n- Dimensions: [size] with floating frame presentation\\n- Certificate of authenticity included\\n\\nThis piece would be stunning in [placement suggestion] and pairs beautifully with [complementary pieces]. Given the limited nature, these typically appreciate 15-25% annually among collectors.\\n\\nWould you like me to reserve this specific edition number while you decide?\\\"\\n```\\n\\n## ESCALATION PROTOCOLS\\n\\n### Immediate Escalation Triggers\\n```\\nCritical Issues:\\n- VIP customer complaints\\n- Quality defects or damage\\n- Order values over $500\\n- Negative social media mentions\\n- Refund requests over $200\\n- Legal threats or serious accusations\\n```\\n\\n### Escalation Process\\n```\\n1. Immediate notification to Business Manager Agent\\n2. Document complete interaction history\\n3. Propose resolution recommendations\\n4. Set customer expectations for follow-up\\n5. Personal follow-up within 24 hours\\n```\\n\\n## PERFORMANCE STANDARDS\\n\\n### Response Time Targets\\n```\\n- VIP Customers: < 30 minutes\\n- Premium Customers: < 1 hour\\n- Standard Customers: < 2 hours\\n- New Customers: < 4 hours\\n```\\n\\n### Resolution Metrics\\n```\\n- First Contact Resolution: > 95%\\n- Customer Satisfaction: > 98%\\n- Escalation Rate: < 5%\\n- Response Quality Score: > 9.5/10\\n```\\n\\nRemember: You represent VividWalls' commitment to exceptional art and customer experience. Every interaction is an opportunity to reinforce our premium positioning, build customer loyalty, and demonstrate why VividWalls is the premier destination for exclusive limited edition art.\\n\\n## CURRENT CUSTOMER INTERACTION\\nProvide exceptional customer service based on the customer's inquiry, profile data, and analyzed context while maintaining VividWalls' premium brand standards.\"\\n  },\\n  {\n    \"role\": \"user\",\\n    \"content\": \"Customer Inquiry: {{ $('Process Support Request').item.json.customer_inquiry }}\\n\\nCustomer Profile: {{ $('Get Customer Profile').item.json }}\\n\\nOrder History: {{ $('Get Order History').item.json }}\\n\\nAnalysis Results: {{ $json.analysis_results }}\\n\\nCustomer Insights: {{ $json.customer_insights }}\\n\\nProvide a personalized, premium customer service response that addresses their specific concern while reinforcing VividWalls' brand positioning and value proposition.\"\\n  }\\n]"
+            },
+            {
+              "name": "max_tokens",
+              "value": "1000"
+            },
+            {
+              "name": "temperature",
+              "value": "0.7"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "hh8i9001-ij89-4k01-lm23-ij4l5l6m7h8i",
+      "name": "Generate Support Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1700, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/business-manager/critical-escalation",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workflow_id",
+              "value": "critical_customer_escalation"
+            },
+            {
+              "name": "from_agent",
+              "value": "customer_service_agent"
+            },
+            {
+              "name": "to_agent",
+              "value": "business_manager_agent"
+            },
+            {
+              "name": "message_type",
+              "value": "critical_escalation"
+            },
+            {
+              "name": "priority",
+              "value": "critical"
+            },
+            {
+              "name": "business_context",
+              "value": {
+                "customer_id": "={{ $('Process Support Request').item.json.customer_id }}",\n                \"customer_tier\": \"={{ $json.analysis_results.customer_tier }}\",\n                \"issue_type\": \"={{ $json.analysis_results.issue_type }}\",\n                \"sentiment\": \"={{ $json.analysis_results.sentiment }}\",\n                \"urgency_level\": \"={{ $json.analysis_results.urgency_level }}\",\n                \"original_inquiry\": \"={{ $('Process Support Request').item.json.customer_inquiry }}\",\n                \"customer_value\": \"={{ $json.customer_insights.total_spent }}\"\n              }
+            },
+            {
+              "name": "escalation_reason",
+              "value": "Critical customer service issue requiring immediate executive attention"
+            },
+            {
+              "name": "recommended_actions",
+              "value": ["immediate_personal_outreach", "executive_response", "compensation_authorization", "brand_protection_measures"]
+            },
+            {
+              "name": "correlation_id",
+              "value": "={{ $('Process Support Request').item.json.customer_id }}-{{ $now }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ii9j0112-jk90-4l12-mn34-jk5m6m7n8i9j",
+      "name": "Escalate Critical Issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1700, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "support_response",
+              "name": "support_response",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "response_timestamp",
+              "name": "response_timestamp",
+              "value": "={{ $now }}",
+              "type": "string"
+            },
+            {
+              "id": "agent_id",
+              "name": "agent_id",
+              "value": "customer_service_agent",
+              "type": "string"
+            },
+            {
+              "id": "resolution_status",
+              "name": "resolution_status",
+              "value": "resolved",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "jj0k1223-kl01-4m23-no45-kl6n7n8o9j0k",
+      "name": "Process Support Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1940, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5432/api/support_tickets",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "customer_id",
+              "value": "={{ $('Process Support Request').item.json.customer_id }}"
+            },
+            {
+              "name": "inquiry_type",
+              "value": "={{ $('Analyze Customer Inquiry').item.json.analysis_results.issue_type }}"
+            },
+            {
+              "name": "customer_message",
+              "value": "={{ $('Process Support Request').item.json.customer_inquiry }}"
+            },
+            {
+              "name": "agent_response",
+              "value": "={{ $json.support_response }}"
+            },
+            {
+              "name": "sentiment_analysis",
+              "value": "={{ $('Analyze Customer Inquiry').item.json.analysis_results }}"
+            },
+            {
+              "name": "customer_tier",
+              "value": "={{ $('Analyze Customer Inquiry').item.json.analysis_results.customer_tier }}"
+            },
+            {
+              "name": "urgency_level",
+              "value": "={{ $('Analyze Customer Inquiry').item.json.analysis_results.urgency_level }}"
+            },
+            {
+              "name": "resolution_status",
+              "value": "={{ $json.resolution_status }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $json.response_timestamp }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "kk1l2334-lm12-4n34-op56-lm7o8o9p0k1l",
+      "name": "Log Support Interaction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1940, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"response\": \"{{ $json.support_response }}\",\n  \"agent_id\": \"{{ $json.agent_id }}\",\n  \"resolution_status\": \"{{ $json.resolution_status }}\",\n  \"urgency_level\": \"{{ $('Analyze Customer Inquiry').item.json.analysis_results.urgency_level }}\",\n  \"customer_tier\": \"{{ $('Analyze Customer Inquiry').item.json.analysis_results.customer_tier }}\",\n  \"timestamp\": \"{{ $json.response_timestamp }}\"\n}",
+        "options": {}
+      },
+      "id": "ll2m3445-mn23-4o45-pq67-mn8p9p0q1l2m",
+      "name": "Return Support Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2180, 200]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "value": 24
+            }
+          ]
+        }
+      },
+      "id": "mm3n4556-no34-4p56-qr78-no9q0q1r2m3n",
+      "name": "Daily Follow-up Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 600]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://localhost:5432/api/support_tickets/pending_followup",
+        "options": {}
+      },
+      "id": "nn4o5667-op45-4q67-rs89-op0r1r2s3n4o",
+      "name": "Get Pending Follow-ups",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "qwen2.5:32b"
+            },
+            {
+              "name": "messages",
+              "value": "[\n  {\n    \"role\": \"system\",\n    \"content\": \"You are the VividWalls Customer Service Agent conducting proactive follow-up communications. Generate personalized follow-up messages that demonstrate care, ensure satisfaction, and reinforce the premium brand experience. Focus on customer satisfaction verification, additional assistance offers, and relationship building.\"\n  },\n  {\n    \"role\": \"user\",\n    \"content\": \"Generate personalized follow-up messages for these customer support interactions: {{ $json.pending_tickets }}\"\n  }\n]"
+            },
+            {
+              "name": "max_tokens",
+              "value": "1500"
+            },
+            {
+              "name": "temperature",
+              "value": "0.7"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "oo5p6778-pq56-4r78-st90-pq1s2s3t4o5p",
+      "name": "Generate Follow-up Messages",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [740, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/mcp/email/send-followup",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "followup_messages",
+              "value": "={{ $json.choices[0].message.content }}"
+            },
+            {
+              "name": "agent_id",
+              "value": "customer_service_agent"
+            },
+            {
+              "name": "campaign_type",
+              "value": "customer_service_followup"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "pp6q7889-qr67-4s89-tu01-qr2t3t4u5p6q",
+      "name": "Send Follow-up Emails",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [980, 600]
+    }
+  ],
+  "connections": {
+    "Customer Support Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Support Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Support Request": {
+      "main": [
+        [
+          {
+            "node": "Check Customer Priority",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Customer Priority": {
+      "main": [
+        [
+          {
+            "node": "Get Customer Profile",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Order History",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Customer Profile",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Order History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Customer Profile": {
+      "main": [
+        [
+          {
+            "node": "Analyze Customer Inquiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Order History": {
+      "main": [
+        [
+          {
+            "node": "Analyze Customer Inquiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Customer Inquiry": {
+      "main": [
+        [
+          {
+            "node": "Check Escalation Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Escalation Needed": {
+      "main": [
+        [
+          {
+            "node": "Generate Support Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Escalate Critical Issue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Support Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Support Response": {
+      "main": [
+        [
+          {
+            "node": "Process Support Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Support Response": {
+      "main": [
+        [
+          {
+            "node": "Log Support Interaction",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Return Support Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Follow-up Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Pending Follow-ups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pending Follow-ups": {
+      "main": [
+        [
+          {
+            "node": "Generate Follow-up Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Follow-up Messages": {
+      "main": [
+        [
+          {
+            "node": "Send Follow-up Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "versionId": "vividwalls-customer-service-v1.0",
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-30T10:00:00.000Z",
+      "updatedAt": "2025-01-30T10:00:00.000Z",
+      "id": "customer-service",
+      "name": "Customer Service"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

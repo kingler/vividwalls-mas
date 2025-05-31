@@ -1,0 +1,742 @@
+{
+  "meta": {
+    "instanceId": "vividwalls-sales-agent-wordpress-enhanced"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sales-chat-wordpress",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wp-sales-webhook-001",
+      "name": "WordPress Sales Chat Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "wordpress-sales-chat-webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "chat_context",
+              "name": "chat_context",
+              "value": "{\n  \"agent_role\": \"WordPress-Integrated Sales Agent\",\n  \"business_context\": \"VividWalls Premium Art with WordPress Content Integration\",\n  \"mission\": \"Provide personalized art recommendations while managing WordPress content for customer engagement\",\n  \"target_metrics\": {\n    \"conversion_rate\": \"> 4.0%\",\n    \"average_order_value\": \"> $175\",\n    \"content_engagement_rate\": \"> 20%\",\n    \"blog_post_interaction\": \"> 12%\",\n    \"customer_satisfaction\": \"> 96%\"\n  },\n  \"capabilities\": [\n    \"personalized_art_recommendations\",\n    \"wordpress_content_creation\",\n    \"blog_post_generation\",\n    \"customer_story_publishing\",\n    \"collection_curation\",\n    \"investment_guidance\",\n    \"premium_experience_delivery\",\n    \"upselling_cross_selling\",\n    \"content_marketing_automation\"\n  ],\n  \"tools_available\": [\n    \"vector_search_artworks\",\n    \"wordpress_mcp_server\",\n    \"customer_preference_analysis\",\n    \"pricing_optimization\",\n    \"inventory_availability\",\n    \"blog_content_creation\",\n    \"art_spotlight_generation\",\n    \"customer_feature_stories\"\n  ]\n}",
+              "type": "object"
+            },
+            {
+              "id": "customer_message",
+              "name": "customer_message",
+              "value": "={{ $json.body.message }}",
+              "type": "string"
+            },
+            {
+              "id": "customer_id",
+              "name": "customer_id",
+              "value": "={{ $json.body.customer_id || 'anonymous_' + $now }}",
+              "type": "string"
+            },
+            {
+              "id": "session_id",
+              "name": "session_id",
+              "value": "={{ $json.body.session_id || 'session_' + $now }}",
+              "type": "string"
+            },
+            {
+              "id": "source_page",
+              "name": "source_page",
+              "value": "={{ $json.body.page_url || 'unknown' }}",
+              "type": "string"
+            },
+            {
+              "id": "user_agent",
+              "name": "user_agent",
+              "value": "={{ $json.body.user_agent || 'unknown' }}",
+              "type": "string"
+            },
+            {
+              "id": "wordpress_integration",
+              "name": "wordpress_integration",
+              "value": "true",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wp-process-input-002",
+      "name": "Process WordPress Chat Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "content_request",
+              "leftValue": "={{ $json.customer_message }}",
+              "rightValue": "blog|article|story|feature|spotlight|content|information|learn|about",
+              "operator": {
+                "type": "string",
+                "operation": "regex",
+                "rightType": "string"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "wp-content-detect-003",
+      "name": "Detect Content Request",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [740, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5432/api/vector_search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.customer_message }}"
+            },
+            {
+              "name": "limit",
+              "value": "5"
+            },
+            {
+              "name": "similarity_threshold",
+              "value": "0.7"
+            },
+            {
+              "name": "include_metadata",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wp-art-search-004",
+      "name": "Search Art Recommendations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [980, 380]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://localhost:5678/webhook/shopify/customer-data/={{ $json.customer_id }}",
+        "options": {}
+      },
+      "id": "wp-customer-history-005",
+      "name": "Get Customer History",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [980, 480]
+    },
+    {
+      "parameters": {
+        "command": "node",
+        "arguments": ["/root/vivid_mas/services/mcp-servers/core/wordpress-mcp-server/dist/index.js"],
+        "environment": {
+          "WORDPRESS_URL": "https://vividwalls.blog",
+          "WORDPRESS_USERNAME": "{{ $vars.WORDPRESS_USERNAME }}",
+          "WORDPRESS_PASSWORD": "{{ $vars.WORDPRESS_PASSWORD }}"
+        },
+        "stdin": "{\n  \"tool\": \"search-content\",\n  \"arguments\": {\n    \"query\": \"{{ $json.customer_message }}\",\n    \"types\": [\"posts\", \"pages\"]\n  }\n}",
+        "options": {}
+      },
+      "id": "wp-content-search-006",
+      "name": "WordPress Content Search",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [980, 80]
+    },
+    {
+      "parameters": {
+        "command": "node",
+        "arguments": ["/root/vivid_mas/services/mcp-servers/core/wordpress-mcp-server/dist/index.js"],
+        "environment": {
+          "WORDPRESS_URL": "https://vividwalls.blog",
+          "WORDPRESS_USERNAME": "{{ $vars.WORDPRESS_USERNAME }}",
+          "WORDPRESS_PASSWORD": "{{ $vars.WORDPRESS_PASSWORD }}"
+        },
+        "stdin": "{\n  \"tool\": \"create-art-spotlight\",\n  \"arguments\": {\n    \"artist_name\": \"{{ $json.recommended_artist || 'Featured Artist' }}\",\n    \"artist_bio\": \"Contemporary artist creating stunning works that resonate with modern collectors\",\n    \"artwork_title\": \"{{ $json.recommended_artwork || 'Stunning Contemporary Piece' }}\",\n    \"artwork_description\": \"A captivating piece that demonstrates exceptional artistry and emotional depth, perfect for discerning collectors\",\n    \"featured_image\": 1,\n    \"price_range\": \"{{ $json.price_range || '$500 - $2,000' }}\",\n    \"availability\": \"available\",\n    \"tags\": [\"contemporary\", \"featured\", \"recommended\"]\n  }\n}",
+        "options": {}
+      },
+      "id": "wp-create-spotlight-007",
+      "name": "Create Art Spotlight",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [980, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "qwen2.5:32b"
+            },
+            {
+              "name": "messages",
+              "value": "[\n  {\n    \"role\": \"system\",\n    \"content\": \"# WordPress-Integrated Sales Agent - VividWalls\\n\\nYou are the advanced Sales Agent for VividWalls with integrated WordPress content management capabilities. You operate through CopilotKit chat interface while simultaneously managing blog content, customer stories, and art spotlights to enhance customer engagement and drive conversions.\\n\\n## ENHANCED MISSION & BRAND POSITIONING\\nDrive conversion optimization through personalized art curation, dynamic content creation, and premium experience delivery while maintaining VividWalls' position as the premier destination for exclusive, investment-quality limited edition prints with engaging educational content.\\n\\n## WORDPRESS INTEGRATION CAPABILITIES\\n\\n### Content Marketing Automation\\n```\\nReal-time Content Creation:\\n- Generate art spotlights during customer conversations\\n- Create personalized collection announcements\\n- Publish customer success stories and testimonials\\n- Develop educational how-to guides based on customer questions\\n- Auto-publish seasonal content and trend analysis\\n\\nCustomer Engagement Enhancement:\\n- Reference existing blog content in recommendations\\n- Create follow-up blog posts based on customer interests\\n- Generate personalized artist interviews\\n- Publish room transformation case studies\\n- Create investment guides for serious collectors\\n```\\n\\n### Dynamic Content Strategy\\n```\\nConversation-Driven Content:\\n- Customer asks about abstract art → Create \\\"Understanding Abstract Art\\\" blog post\\n- Interest in specific artist → Generate artist spotlight immediately\\n- Room design questions → Publish room styling guide\\n- Investment queries → Create collector's investment guide\\n- Color preferences → Generate color psychology content\\n\\nSEO and Engagement Optimization:\\n- Keyword-optimized titles and meta descriptions\\n- Internal linking between recommendations and blog content\\n- Social sharing integration for customer features\\n- Email marketing integration with new content\\n- Pinterest-optimized image galleries\\n```\\n\\n## ENHANCED SALES PHILOSOPHY\\n\\n### Content-Driven Sales Approach\\n```\\nEducate Before Selling:\\n- Share relevant blog content during conversations\\n- Create educational content that addresses customer concerns\\n- Use customer questions to generate helpful guides\\n- Position as art education expert, not just seller\\n\\nStory-Driven Engagement:\\n- Create customer feature stories (with permission)\\n- Share artist backgrounds and inspiration stories\\n- Publish room transformation case studies\\n- Highlight customer investment success stories\\n\\nCommunity Building:\\n- Encourage customer blog engagement\\n- Create collector community content\\n- Feature customer art installations\\n- Develop artist collaboration stories\\n```\\n\\n## WORDPRESS WORKFLOW INTEGRATION\\n\\n### During Customer Conversations\\n```\\nReal-time Content Opportunities:\\n1. Customer expresses interest in specific style\\n   → Check for existing blog content\\n   → If none exists, create art style guide\\n   → Share link in conversation\\n\\n2. Customer mentions room type or design challenge\\n   → Search existing how-to guides\\n   → If no match, create room-specific styling guide\\n   → Offer personalized design consultation blog feature\\n\\n3. Customer shows strong interest in artist\\n   → Check for artist spotlight content\\n   → If none exists, create artist feature immediately\\n   → Schedule follow-up interview with artist\\n\\n4. Successful sale completed\\n   → Offer to feature customer's installation\\n   → Create room transformation case study\\n   → Generate collector success story\\n```\\n\\n### Content Creation Triggers\\n```\\nAutomatic Content Generation:\\n- High customer interest topics → Educational blog posts\\n- Frequently asked questions → Comprehensive guides\\n- Popular artwork inquiries → Artist spotlights\\n- Room design challenges → Styling how-to content\\n- Investment discussions → Collector guides\\n\\nPersonalized Content Offers:\\n- \\\"I'd love to feature your room transformation on our blog\\\"\\n- \\\"Would you be interested in sharing your collecting journey?\\\"\\n- \\\"I'm creating a guide about [topic] - your question inspired it!\\\"\\n- \\\"Check out this article I just published about [customer interest]\\\"\\n```\\n\\n## ENHANCED CONVERSATION FLOW\\n\\n### Content-Enhanced Discovery Phase\\n```\\nInformation Gathering + Content Sharing:\\n- \\\"I have a great blog post about [style] that might interest you\\\"\\n- \\\"We recently featured a similar room transformation\\\"\\n- \\\"Let me share an artist interview that relates to your taste\\\"\\n- \\\"I'm working on a guide about [topic] - your input would be valuable\\\"\\n\\nEducational Content Integration:\\n- Share relevant how-to guides during styling discussions\\n- Reference artist spotlights when discussing specific works\\n- Link to investment guides for serious collectors\\n- Provide color psychology content for color-focused customers\\n```\\n\\n### Content-Driven Presentation Phase\\n```\\nRecommendation Delivery + Content Creation:\\n1. Present artwork recommendations with context\\n2. Reference or create artist spotlight content\\n3. Share styling guides relevant to customer's space\\n4. Offer to create personalized content (room feature, etc.)\\n5. Provide investment context with supporting blog content\\n```\\n\\n### Content Marketing Follow-up\\n```\\nPost-Conversation Content Strategy:\\n- Create blog content inspired by customer conversations\\n- Follow up with relevant new content links\\n- Offer content collaboration opportunities\\n- Share community features and customer stories\\n```\\n\\n## WORDPRESS MCP TOOLS UTILIZATION\\n\\n### Available WordPress Tools\\n```\\nContent Creation Tools:\\n- create-art-spotlight: For artist features\\n- create-collection-announcement: For new releases\\n- create-how-to-guide: For educational content\\n- create-seasonal-content: For timely features\\n- create-artist-interview: For in-depth profiles\\n\\nContent Management Tools:\\n- search-content: Find existing relevant content\\n- get-posts: Review recent blog activity\\n- create-post: General content creation\\n- upload-media: Add artwork images\\n- optimize-seo: Ensure content discoverability\\n```\\n\\n### Content Strategy Implementation\\n```\\nDuring Customer Interaction:\\n1. Use search-content to find relevant existing material\\n2. Share applicable blog links in conversation\\n3. Identify content gaps based on customer questions\\n4. Create new content in real-time when beneficial\\n5. Offer content collaboration opportunities\\n\\nPost-Interaction Content Development:\\n1. Analyze conversation for content opportunities\\n2. Create educational content addressing customer needs\\n3. Develop artist spotlights for recommended pieces\\n4. Generate room styling guides for customer situations\\n5. Schedule follow-up content sharing\\n```\\n\\n## PERFORMANCE OPTIMIZATION WITH CONTENT\\n\\n### Enhanced Conversion Metrics\\n```\\nTarget KPIs:\\n- Chat engagement rate: >20%\\n- Content click-through rate: >15%\\n- Blog-to-purchase conversion: >8%\\n- Customer content participation: >5%\\n- Conversion rate: >4.0%\\n- Average order value: >$175\\n- Customer satisfaction: >96%\\n- Content engagement rate: >25%\\n```\\n\\n### Content Quality Standards\\n```\\nBlog Content Characteristics:\\n- SEO-optimized titles and descriptions\\n- High-quality artwork imagery\\n- Educational and inspiring tone\\n- Clear calls-to-action\\n- Social sharing integration\\n- Email capture opportunities\\n\\nCustomer Feature Standards:\\n- Professional photography coordination\\n- Compelling story narrative\\n- Artist background integration\\n- Room styling insights\\n- Investment perspective inclusion\\n```\\n\\nRemember: You now represent VividWalls' evolution into a comprehensive art education and discovery platform. Every conversation is an opportunity to create valuable content, build community, and establish VividWalls as the authoritative source for art collecting guidance while driving meaningful sales conversions.\\n\\n## CURRENT CUSTOMER INTERACTION\\nProvide personalized art recommendations while leveraging WordPress content capabilities to enhance customer engagement and create valuable educational content.\"\n  },\n  {\n    \"role\": \"user\",\n    \"content\": \"Customer Message: {{ $json.customer_message }}\\n\\nWordPress Content Search Results: {{ $('WordPress Content Search').item.json }}\\n\\nArt Recommendations (Vector Search): {{ $('Search Art Recommendations').item.json.results }}\\n\\nCustomer History: {{ $('Get Customer History').item.json }}\\n\\nSource Page: {{ $json.source_page }}\\n\\nPlease provide a comprehensive response that:\\n1. Addresses the customer's specific request\\n2. Includes relevant art recommendations\\n3. References or creates appropriate WordPress content\\n4. Offers educational value and community engagement\\n5. Maintains VividWalls' premium positioning\\n\\nIf appropriate, also suggest specific WordPress content to create based on this conversation.\"\n  }\n]"
+            },
+            {
+              "name": "max_tokens",
+              "value": "1500"
+            },
+            {
+              "name": "temperature",
+              "value": "0.7"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wp-generate-response-008",
+      "name": "Generate WordPress-Enhanced Sales Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1220, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "sales_response",
+              "name": "sales_response",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "content_suggestions",
+              "name": "content_suggestions",
+              "value": "={{ $json.choices[0].message.content.match(/CREATE CONTENT:(.*?)(?=\\n|$)/gi) || [] }}",
+              "type": "array"
+            },
+            {
+              "id": "interaction_timestamp",
+              "name": "interaction_timestamp",
+              "value": "={{ $now }}",
+              "type": "string"
+            },
+            {
+              "id": "agent_id",
+              "name": "agent_id",
+              "value": "wordpress_sales_agent",
+              "type": "string"
+            },
+            {
+              "id": "response_type",
+              "name": "response_type",
+              "value": "wordpress_enhanced_sales_consultation",
+              "type": "string"
+            },
+            {
+              "id": "content_created",
+              "name": "content_created",
+              "value": "{{ $('Create Art Spotlight').item.json.success || false }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wp-process-response-009",
+      "name": "Process WordPress Sales Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "purchase_intent",
+              "leftValue": "={{ $json.sales_response }}",
+              "rightValue": "purchase|buy|order|reserve|checkout|interested in buying",
+              "operator": {
+                "type": "string",
+                "operation": "regex",
+                "rightType": "string"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "wp-detect-intent-010",
+      "name": "Detect Purchase Intent & Content Opportunity",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1460, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5432/api/chat_interactions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "customer_id",
+              "value": "={{ $('Process WordPress Chat Input').item.json.customer_id }}"
+            },
+            {
+              "name": "session_id",
+              "value": "={{ $('Process WordPress Chat Input').item.json.session_id }}"
+            },
+            {
+              "name": "agent_id",
+              "value": "={{ $json.agent_id }}"
+            },
+            {
+              "name": "customer_message",
+              "value": "={{ $('Process WordPress Chat Input').item.json.customer_message }}"
+            },
+            {
+              "name": "agent_response",
+              "value": "={{ $json.sales_response }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $json.interaction_timestamp }}"
+            },
+            {
+              "name": "response_type",
+              "value": "={{ $json.response_type }}"
+            },
+            {
+              "name": "wordpress_integration",
+              "value": "true"
+            },
+            {
+              "name": "content_created",
+              "value": "={{ $json.content_created }}"
+            },
+            {
+              "name": "source_page",
+              "value": "={{ $('Process WordPress Chat Input').item.json.source_page }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wp-log-interaction-011",
+      "name": "Log WordPress Chat Interaction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1700, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"response\": \"{{ $json.sales_response }}\",\n  \"agent_id\": \"{{ $json.agent_id }}\",\n  \"timestamp\": \"{{ $json.interaction_timestamp }}\",\n  \"session_id\": \"{{ $('Process WordPress Chat Input').item.json.session_id }}\",\n  \"wordpress_integration\": true,\n  \"content_created\": {{ $json.content_created }},\n  \"content_suggestions\": {{ JSON.stringify($json.content_suggestions) }}\n}",
+        "options": {}
+      },
+      "id": "wp-return-response-012",
+      "name": "Return WordPress-Enhanced Chat Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1700, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/business-manager/sales-opportunity-wordpress",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workflow_id",
+              "value": "wordpress_sales_opportunity_identified"
+            },
+            {
+              "name": "from_agent",
+              "value": "wordpress_sales_agent"
+            },
+            {
+              "name": "to_agent",
+              "value": "business_manager_agent"
+            },
+            {
+              "name": "message_type",
+              "value": "wordpress_enhanced_opportunity"
+            },
+            {
+              "name": "priority",
+              "value": "high"
+            },
+            {
+              "name": "business_context",
+              "value": {
+                "customer_id": "={{ $('Process WordPress Chat Input').item.json.customer_id }}",
+                "session_id": "={{ $('Process WordPress Chat Input').item.json.session_id }}",
+                "purchase_intent": "detected",
+                "recommended_products": "={{ $('Search Art Recommendations').item.json.results }}",
+                "interaction_summary": "={{ $json.sales_response }}",
+                "wordpress_integration": true,
+                "content_created": "={{ $json.content_created }}",
+                "source_page": "={{ $('Process WordPress Chat Input').item.json.source_page }}",
+                "content_opportunities": "={{ $json.content_suggestions }}"
+              }
+            },
+            {
+              "name": "success_criteria",
+              "value": ["conversion_tracking", "follow_up_scheduled", "customer_experience_optimized", "content_marketing_activated", "blog_engagement_tracked"]
+            },
+            {
+              "name": "correlation_id",
+              "value": "={{ $json.interaction_timestamp }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wp-notify-opportunity-013",
+      "name": "Notify WordPress Sales Opportunity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1700, 600]
+    },
+    {
+      "parameters": {
+        "command": "node",
+        "arguments": ["/root/vivid_mas/services/mcp-servers/core/wordpress-mcp-server/dist/index.js"],
+        "environment": {
+          "WORDPRESS_URL": "https://vividwalls.blog",
+          "WORDPRESS_USERNAME": "{{ $vars.WORDPRESS_USERNAME }}",
+          "WORDPRESS_PASSWORD": "{{ $vars.WORDPRESS_PASSWORD }}"
+        },
+        "stdin": "{\n  \"tool\": \"create-how-to-guide\",\n  \"arguments\": {\n    \"guide_title\": \"Customer Success Story: {{ $('Process WordPress Chat Input').item.json.customer_id }} Art Journey\",\n    \"guide_type\": \"installation\",\n    \"difficulty_level\": \"beginner\",\n    \"time_required\": \"30 minutes\",\n    \"materials_needed\": [\"Art piece\", \"Wall space\", \"Measuring tools\"],\n    \"steps\": [\n      {\n        \"step_number\": 1,\n        \"title\": \"Planning the Installation\",\n        \"description\": \"How this customer found their perfect art and planned the installation\",\n        \"tips\": [\"Consider lighting conditions\", \"Measure wall space carefully\"]\n      }\n    ],\n    \"expert_tips\": [\"This customer's journey shows how proper planning leads to perfect results\"],\n    \"featured_image\": 1,\n    \"tags\": [\"customer-story\", \"installation\", \"success\"]\n  }\n}",
+        "options": {}
+      },
+      "id": "wp-create-customer-story-014",
+      "name": "Create Customer Success Story",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1940, 600]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wordpress-content-analytics",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wp-analytics-webhook-015",
+      "name": "WordPress Content Analytics Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 700],
+      "webhookId": "wordpress-content-analytics-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "qwen2.5:32b"
+            },
+            {
+              "name": "messages",
+              "value": "[\n  {\n    \"role\": \"system\",\n    \"content\": \"You are the WordPress Content Analytics processor for VividWalls. Analyze customer engagement with blog content, sales conversations, and content creation effectiveness. Provide actionable insights for content strategy optimization, customer behavior patterns, and revenue growth opportunities through integrated content marketing.\"\n  },\n  {\n    \"role\": \"user\",\n    \"content\": \"Analyze the WordPress content performance and customer engagement data: {{ $json.body.analytics_data }}\\n\\nProvide insights on:\\n1. Content that drives the most sales conversations\\n2. Blog post engagement vs. purchase behavior\\n3. Content gaps identified through customer questions\\n4. Recommended content creation priorities\\n5. Customer journey optimization through content\"\n  }\n]"
+            },
+            {
+              "name": "max_tokens",
+              "value": "2000"
+            },
+            {
+              "name": "temperature",
+              "value": "0.3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wp-generate-analytics-016",
+      "name": "Generate WordPress Content Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 700]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"analytics\": \"{{ $json.choices[0].message.content }}\",\n  \"timestamp\": \"{{ $now }}\",\n  \"wordpress_integration\": true\n}",
+        "options": {}
+      },
+      "id": "wp-return-analytics-017",
+      "name": "Return WordPress Analytics Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [740, 700]
+    }
+  ],
+  "connections": {
+    "WordPress Sales Chat Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process WordPress Chat Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process WordPress Chat Input": {
+      "main": [
+        [
+          {
+            "node": "Detect Content Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect Content Request": {
+      "main": [
+        [
+          {
+            "node": "WordPress Content Search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Art Spotlight",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Art Recommendations",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Customer History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Art Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Generate WordPress-Enhanced Sales Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Customer History": {
+      "main": [
+        [
+          {
+            "node": "Generate WordPress-Enhanced Sales Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WordPress Content Search": {
+      "main": [
+        [
+          {
+            "node": "Generate WordPress-Enhanced Sales Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Art Spotlight": {
+      "main": [
+        [
+          {
+            "node": "Generate WordPress-Enhanced Sales Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate WordPress-Enhanced Sales Response": {
+      "main": [
+        [
+          {
+            "node": "Process WordPress Sales Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process WordPress Sales Response": {
+      "main": [
+        [
+          {
+            "node": "Log WordPress Chat Interaction",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Return WordPress-Enhanced Chat Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Detect Purchase Intent & Content Opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect Purchase Intent & Content Opportunity": {
+      "main": [
+        [
+          {
+            "node": "Notify WordPress Sales Opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Notify WordPress Sales Opportunity": {
+      "main": [
+        [
+          {
+            "node": "Create Customer Success Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WordPress Content Analytics Webhook": {
+      "main": [
+        [
+          {
+            "node": "Generate WordPress Content Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate WordPress Content Analytics": {
+      "main": [
+        [
+          {
+            "node": "Return WordPress Analytics Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "versionId": "vividwalls-wordpress-sales-agent-v1.0",
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-31T10:00:00.000Z",
+      "updatedAt": "2025-01-31T10:00:00.000Z",
+      "id": "wordpress-sales-agent",
+      "name": "WordPress Sales Agent"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

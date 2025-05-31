@@ -1,0 +1,348 @@
+{
+  "name": "VividWalls Artwork Color Analysis via MCP Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "artwork-color-analysis-mcp",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "artwork-webhook",
+      "name": "Artwork Analysis Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "vividwalls-artwork-color-mcp"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse incoming artwork data for color analysis\nconst body = $input.first().json.body;\n\n// Extract artwork information\nconst artworkId = body.artworkId || body.id || `artwork_${Date.now()}`;\nconst artworkTitle = body.title || 'Untitled Artwork';\nconst collection = body.collection || 'Unknown Collection';\nconst imageUrl = body.imageUrl || body.image_url || '';\nconst artist = body.artist || 'Unknown Artist';\nconst tags = body.tags || [];\nconst existingAnalysis = body.existingAnalysis || null;\n\n// Validate required fields\nif (!imageUrl || imageUrl.trim().length === 0) {\n  throw new Error('Image URL is required for color analysis');\n}\n\n// Download the image to make it accessible to the MCP server\nconst imageFileName = `${artworkId}_${Date.now()}.jpg`;\nconst imagePath = `/tmp/${imageFileName}`;\n\n// Prepare workflow data\nreturn {\n  artwork: {\n    id: artworkId,\n    title: artworkTitle,\n    collection: collection,\n    artist: artist,\n    imageUrl: imageUrl,\n    tags: tags,\n    imagePath: imagePath,\n    imageFileName: imageFileName\n  },\n  analysisRequest: {\n    timestamp: new Date().toISOString(),\n    requestId: `analysis_${Date.now()}`,\n    analysisType: body.analysisType || 'comprehensive',\n    skipExisting: body.skipExisting || false,\n    existingAnalysis: existingAnalysis\n  },\n  processingSteps: [\n    'download_image',\n    'mcp_color_analysis',\n    'process_results',\n    'store_in_database',\n    'generate_embeddings'\n  ]\n};"
+      },
+      "id": "parse-artwork-data",
+      "name": "Parse Artwork Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.artwork.imageUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-image",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $('parse-artwork-data').first().json.artwork.imagePath }}",
+        "options": {}
+      },
+      "id": "save-image",
+      "name": "Save Image to Disk",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/analyze",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "image_path",
+              "value": "={{ $('parse-artwork-data').first().json.artwork.imagePath }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "call-mcp-agent",
+      "name": "Call Color Psychology MCP Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300],
+      "notes": "This calls the Color Psychology MCP Server running locally.\nIn production, update the URL to point to the deployed MCP server."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process MCP agent response and enhance with additional data\nconst mcpResponse = $input.first().json;\nconst artworkData = $('parse-artwork-data').first().json;\n\n// Extract palette information from MCP response\nconst palette = mcpResponse.palette || [];\nconst harmony = mcpResponse.harmony || 'unknown';\nconst effects = mcpResponse.effects || [];\n\n// Convert RGB tuples to hex and calculate percentages\nconst dominantColors = palette.map((rgb, index) => {\n  const [r, g, b] = rgb;\n  const hex = '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');\n  \n  // Assign decreasing percentages to colors based on prominence\n  const percentage = Math.round((100 - (index * 15)) / palette.length);\n  \n  return {\n    hex: hex,\n    name: getColorName(rgb),\n    percentage: percentage,\n    rgb: { r, g, b },\n    category: categorizeColor(rgb)\n  };\n});\n\n// Process psychological effects\nconst psychologicalProfile = {\n  primaryMood: effects[0]?.name || 'neutral',\n  secondaryMood: effects[1]?.name || null,\n  emotionalImpact: effects.map(e => e.description),\n  psychologicalEffects: effects.map(e => `promotes ${e.name}`),\n  atmosphereType: `${effects[0]?.name || 'balanced'} ${harmony || 'harmonious'}`\n};\n\n// Determine room recommendations based on mood\nconst moodToRooms = {\n  'calming': ['bedroom', 'study', 'bathroom'],\n  'energizing': ['office', 'gym', 'kitchen'],\n  'playful': ['playroom', 'children-room', 'creative-space'],\n  'natural': ['living-room', 'dining-room', 'sunroom'],\n  'dramatic': ['home-theater', 'office', 'gallery'],\n  'romantic': ['bedroom', 'dining-room', 'lounge'],\n  'uplifting': ['kitchen', 'hallway', 'entryway'],\n  'grounded': ['study', 'library', 'den'],\n  'mysterious': ['bedroom', 'meditation-room', 'study'],\n  'pure': ['bathroom', 'nursery', 'minimalist-space']\n};\n\nconst recommendedRooms = moodToRooms[psychologicalProfile.primaryMood] || ['any-room'];\n\n// Prepare database-ready data\nconst dbData = {\n  // Artwork identification\n  artworkId: artworkData.artwork.id,\n  artworkTitle: artworkData.artwork.title,\n  collection: artworkData.artwork.collection,\n  artist: artworkData.artwork.artist,\n  imageUrl: artworkData.artwork.imageUrl,\n  \n  // Color analysis results\n  dominantColors: dominantColors,\n  colorTemperature: {\n    overall: categorizeTemperature(dominantColors),\n    warmPercentage: calculateWarmPercentage(dominantColors),\n    coolPercentage: calculateCoolPercentage(dominantColors),\n    balance: 'analyzing based on palette'\n  },\n  colorHarmony: {\n    type: harmony || 'custom',\n    description: `${harmony || 'unique'} color relationship`,\n    harmonyScore: harmony ? 0.85 : 0.65\n  },\n  \n  // Psychological profile\n  primaryMood: psychologicalProfile.primaryMood,\n  secondaryMood: psychologicalProfile.secondaryMood,\n  emotionalImpact: psychologicalProfile.emotionalImpact,\n  psychologicalEffects: psychologicalProfile.psychologicalEffects,\n  atmosphereType: psychologicalProfile.atmosphereType,\n  \n  // Spatial recommendations\n  recommendedRooms: recommendedRooms,\n  avoidRooms: [],\n  lightingRequirements: 'adaptable to various lighting conditions',\n  spaceSizeRecommendation: 'suitable for medium to large spaces',\n  wallPlacement: ['focal wall', 'above furniture', 'gallery wall'],\n  \n  // Style compatibility (simplified for now)\n  styleCompatibility: {\n    primaryStyles: determineStyles(harmony, effects),\n    secondaryStyles: ['transitional', 'eclectic'],\n    furnitureRecommendations: ['complementary color accents'],\n    textileColors: dominantColors.slice(0, 3).map(c => c.name),\n    accentColors: []\n  },\n  \n  // Search keywords\n  searchKeywords: [\n    `${psychologicalProfile.primaryMood} artwork`,\n    `${harmony || 'artistic'} color scheme`,\n    artworkData.artwork.collection.toLowerCase(),\n    ...effects.map(e => `${e.name} decor`)\n  ],\n  \n  // Analysis metadata\n  analysisTimestamp: new Date().toISOString(),\n  analysisVersion: '2.0-mcp',\n  confidenceScore: 0.88,\n  analysisNotes: 'Analyzed via Color Psychology MCP Server'\n};\n\n// Helper functions\nfunction getColorName(rgb) {\n  const [r, g, b] = rgb;\n  // Simplified color naming based on RGB values\n  if (r > 200 && g < 100 && b < 100) return 'Red';\n  if (r > 200 && g > 150 && b < 100) return 'Orange';\n  if (r > 200 && g > 200 && b < 100) return 'Yellow';\n  if (r < 100 && g > 150 && b < 100) return 'Green';\n  if (r < 100 && g < 100 && b > 150) return 'Blue';\n  if (r > 150 && g < 100 && b > 150) return 'Purple';\n  if (r > 200 && g < 150 && b > 180) return 'Pink';\n  if (r > 150 && g > 100 && b < 100) return 'Brown';\n  if (r < 50 && g < 50 && b < 50) return 'Black';\n  if (r > 200 && g > 200 && b > 200) return 'White';\n  if (r > 100 && g > 100 && b > 100) return 'Gray';\n  return 'Mixed';\n}\n\nfunction categorizeColor(rgb) {\n  const [r, g, b] = rgb;\n  const warmth = (r * 2 + g) / 3;\n  const coolness = (b * 2 + g) / 3;\n  return warmth > coolness ? 'warm' : 'cool';\n}\n\nfunction categorizeTemperature(colors) {\n  const warmCount = colors.filter(c => c.category === 'warm').length;\n  const coolCount = colors.filter(c => c.category === 'cool').length;\n  if (warmCount > coolCount * 1.5) return 'warm';\n  if (coolCount > warmCount * 1.5) return 'cool';\n  return 'neutral';\n}\n\nfunction calculateWarmPercentage(colors) {\n  const warmColors = colors.filter(c => c.category === 'warm');\n  return warmColors.reduce((sum, c) => sum + c.percentage, 0);\n}\n\nfunction calculateCoolPercentage(colors) {\n  const coolColors = colors.filter(c => c.category === 'cool');\n  return coolColors.reduce((sum, c) => sum + c.percentage, 0);\n}\n\nfunction determineStyles(harmony, effects) {\n  const styles = [];\n  if (harmony === 'complementary') styles.push('modern', 'contemporary');\n  if (harmony === 'analogous') styles.push('traditional', 'classic');\n  if (harmony === 'triadic') styles.push('eclectic', 'bohemian');\n  if (effects.some(e => e.name === 'calming')) styles.push('minimalist');\n  if (effects.some(e => e.name === 'dramatic')) styles.push('maximalist');\n  if (styles.length === 0) styles.push('versatile');\n  return styles;\n}\n\n// Prepare embedding text\nconst embeddingText = [\n  artworkData.artwork.title,\n  artworkData.artwork.collection,\n  dbData.primaryMood,\n  dbData.secondaryMood,\n  ...dbData.dominantColors.map(c => c.name),\n  ...dbData.recommendedRooms,\n  ...dbData.searchKeywords,\n  dbData.atmosphereType\n].filter(Boolean).join(' ');\n\nreturn {\n  artworkData: artworkData,\n  mcpAnalysis: mcpResponse,\n  databaseData: dbData,\n  embeddingText: embeddingText,\n  processingStep: 'mcp_analysis_complete'\n};"
+      },
+      "id": "process-mcp-results",
+      "name": "Process MCP Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "model": "text-embedding-3-small",
+        "options": {},
+        "text": "={{ $json.embeddingText }}"
+      },
+      "id": "generate-embedding",
+      "name": "Generate Embedding",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1560, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-api",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Insert or update artwork with color analysis from MCP\nINSERT INTO artwork (\n    id, title, artist, collection, \n    description, image_url, thumbnail_url,\n    dominant_colors, color_temperature, color_harmony,\n    mood_attributes, recommended_spaces, style_attributes,\n    color_embedding, style_embedding,\n    analysis_status, analyzed_at, analysis_confidence,\n    tags, metadata, availability, price\n) VALUES (\n    $1, $2, $3, $4,\n    $5, $6, $7,\n    $8::jsonb, $9, $10::jsonb,\n    $11::text[], $12::text[], $13::jsonb,\n    $14::vector(1536), NULL,\n    'completed'::analysis_status, NOW(), $15,\n    $16::text[], $17::jsonb, true, 0\n)\nON CONFLICT (id) DO UPDATE SET\n    dominant_colors = EXCLUDED.dominant_colors,\n    color_temperature = EXCLUDED.color_temperature,\n    color_harmony = EXCLUDED.color_harmony,\n    mood_attributes = EXCLUDED.mood_attributes,\n    recommended_spaces = EXCLUDED.recommended_spaces,\n    style_attributes = EXCLUDED.style_attributes,\n    color_embedding = EXCLUDED.color_embedding,\n    analysis_status = EXCLUDED.analysis_status,\n    analyzed_at = EXCLUDED.analyzed_at,\n    analysis_confidence = EXCLUDED.analysis_confidence,\n    updated_at = NOW()\nRETURNING *;",
+        "additionalFields": {
+          "mode": "list",
+          "values": {
+            "value1": "={{ $('process-mcp-results').first().json.databaseData.artworkId }}",
+            "value2": "={{ $('process-mcp-results').first().json.databaseData.artworkTitle }}",
+            "value3": "={{ $('process-mcp-results').first().json.databaseData.artist }}",
+            "value4": "={{ $('process-mcp-results').first().json.databaseData.collection }}",
+            "value5": "={{ $('process-mcp-results').first().json.databaseData.artworkTitle }} - {{ $('process-mcp-results').first().json.databaseData.collection }}",
+            "value6": "={{ $('process-mcp-results').first().json.databaseData.imageUrl }}",
+            "value7": "={{ $('process-mcp-results').first().json.databaseData.imageUrl }}",
+            "value8": "={{ JSON.stringify($('process-mcp-results').first().json.databaseData.dominantColors) }}",
+            "value9": "={{ $('process-mcp-results').first().json.databaseData.colorTemperature.overall }}",
+            "value10": "={{ JSON.stringify($('process-mcp-results').first().json.databaseData.colorHarmony) }}",
+            "value11": "={{ $('process-mcp-results').first().json.databaseData.emotionalImpact }}",
+            "value12": "={{ $('process-mcp-results').first().json.databaseData.recommendedRooms }}",
+            "value13": "={{ JSON.stringify($('process-mcp-results').first().json.databaseData.styleCompatibility) }}",
+            "value14": "={{ $('generate-embedding').first().json.data[0].embedding }}",
+            "value15": "={{ $('process-mcp-results').first().json.databaseData.confidenceScore }}",
+            "value16": "={{ $('process-mcp-results').first().json.databaseData.searchKeywords }}",
+            "value17": "={{ JSON.stringify({ analysisVersion: $('process-mcp-results').first().json.databaseData.analysisVersion, analysisNotes: $('process-mcp-results').first().json.databaseData.analysisNotes, mcpResponse: $('process-mcp-results').first().json.mcpAnalysis }) }}"
+          }
+        }
+      },
+      "id": "store-artwork-analysis",
+      "name": "Store Artwork Analysis",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1780, 300],
+      "credentials": {
+        "postgres": {
+          "id": "vividwalls-postgres",
+          "name": "VividWalls PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "fileName": "={{ $('parse-artwork-data').first().json.artwork.imagePath }}"
+      },
+      "id": "cleanup-temp-image",
+      "name": "Cleanup Temp Image",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [2000, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare response with MCP analysis results\nconst analysisData = $('process-mcp-results').first().json;\nconst storedArtwork = $('store-artwork-analysis').first().json;\n\n// Calculate processing metrics\nconst startTime = new Date(analysisData.artworkData.analysisRequest.timestamp).getTime();\nconst endTime = Date.now();\nconst processingTime = endTime - startTime;\n\n// Build comprehensive response\nconst response = {\n  success: true,\n  artwork: {\n    id: analysisData.databaseData.artworkId,\n    title: analysisData.databaseData.artworkTitle,\n    collection: analysisData.databaseData.collection,\n    artist: analysisData.databaseData.artist,\n    imageUrl: analysisData.databaseData.imageUrl\n  },\n  colorAnalysis: {\n    dominantColors: analysisData.databaseData.dominantColors,\n    colorTemperature: analysisData.databaseData.colorTemperature,\n    colorHarmony: analysisData.databaseData.colorHarmony,\n    rawPalette: analysisData.mcpAnalysis.palette,\n    harmonyType: analysisData.mcpAnalysis.harmony\n  },\n  psychologicalProfile: {\n    primaryMood: analysisData.databaseData.primaryMood,\n    secondaryMood: analysisData.databaseData.secondaryMood,\n    emotionalImpact: analysisData.databaseData.emotionalImpact,\n    psychologicalEffects: analysisData.databaseData.psychologicalEffects,\n    atmosphereType: analysisData.databaseData.atmosphereType,\n    mcpEffects: analysisData.mcpAnalysis.effects\n  },\n  recommendations: {\n    recommendedRooms: analysisData.databaseData.recommendedRooms,\n    avoidRooms: analysisData.databaseData.avoidRooms,\n    lightingRequirements: analysisData.databaseData.lightingRequirements,\n    spaceSizeRecommendation: analysisData.databaseData.spaceSizeRecommendation,\n    wallPlacement: analysisData.databaseData.wallPlacement,\n    styleCompatibility: analysisData.databaseData.styleCompatibility\n  },\n  searchMetadata: {\n    keywords: analysisData.databaseData.searchKeywords,\n    embeddingGenerated: true,\n    vectorDimensions: 1536\n  },\n  analysisMetadata: {\n    timestamp: analysisData.databaseData.analysisTimestamp,\n    version: analysisData.databaseData.analysisVersion,\n    confidenceScore: analysisData.databaseData.confidenceScore,\n    processingTimeMs: processingTime,\n    analysisNotes: analysisData.databaseData.analysisNotes,\n    mcpServer: 'color-psychology-mcp'\n  },\n  databaseStatus: {\n    stored: true,\n    recordId: storedArtwork[0]?.id || analysisData.databaseData.artworkId,\n    analysisStatus: 'completed'\n  }\n};\n\nreturn response;"
+      },
+      "id": "prepare-response",
+      "name": "Prepare Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Analysis-Version",
+                "value": "2.0-mcp"
+              },
+              {
+                "name": "X-Processing-Time",
+                "value": "={{ $json.analysisMetadata.processingTimeMs }}"
+              },
+              {
+                "name": "X-MCP-Server",
+                "value": "color-psychology-mcp"
+              }
+            ]
+          }
+        }
+      },
+      "id": "send-response",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2440, 300]
+    }
+  ],
+  "connections": {
+    "Artwork Analysis Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Artwork Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Artwork Data": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Save Image to Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Image to Disk": {
+      "main": [
+        [
+          {
+            "node": "Call Color Psychology MCP Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Color Psychology MCP Agent": {
+      "main": [
+        [
+          {
+            "node": "Process MCP Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process MCP Results": {
+      "main": [
+        [
+          {
+            "node": "Generate Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Embedding": {
+      "main": [
+        [
+          {
+            "node": "Store Artwork Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Artwork Analysis": {
+      "main": [
+        [
+          {
+            "node": "Cleanup Temp Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleanup Temp Image": {
+      "main": [
+        [
+          {
+            "node": "Prepare Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Response": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-05-31T12:00:00.000Z",
+      "updatedAt": "2025-05-31T12:00:00.000Z",
+      "id": "vividwalls",
+      "name": "VividWalls"
+    },
+    {
+      "createdAt": "2025-05-31T12:00:00.000Z",
+      "updatedAt": "2025-05-31T12:00:00.000Z",
+      "id": "color-analysis",
+      "name": "Color Analysis"
+    },
+    {
+      "createdAt": "2025-05-31T12:00:00.000Z",
+      "updatedAt": "2025-05-31T12:00:00.000Z",
+      "id": "mcp-agent",
+      "name": "MCP Agent"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-05-31T12:00:00.000Z",
+  "versionId": "2.0"
+} 

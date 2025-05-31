@@ -1,0 +1,494 @@
+{
+  "meta": {
+    "instanceId": "vividwalls-marketing-research-agent"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "manual"
+      },
+      "id": "bb8c4329-0b81-4b12-8c6a-8c8d5f3e4b2a",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "value": "0 9 1 * *"
+            }
+          ]
+        }
+      },
+      "id": "aa7b3218-9c70-4f01-9e5f-7c6d4e2f3b1a",
+      "name": "Monthly Research Cycle",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 480]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "research_context",
+              "name": "research_context",
+              "value": "{\n  \"agent_role\": \"Marketing Research Agent\",\n  \"business_context\": \"VividWalls Premium Limited Edition Art Prints\",\n  \"mission\": \"Monthly market analysis, trend forecasting, and competitive intelligence\",\n  \"target_metrics\": {\n    \"market_opportunity_score\": \"> 8.0\",\n    \"trend_relevance\": \"> 85%\",\n    \"competitive_gap_analysis\": \"detailed\",\n    \"customer_insight_depth\": \"actionable\"\n  },\n  \"data_sources\": [\n    \"pinterest_trends\",\n    \"google_trends\", \n    \"competitor_analysis\",\n    \"customer_behavior_data\",\n    \"industry_reports\"\n  ],\n  \"deliverables\": [\n    \"monthly_market_report\",\n    \"trend_forecast_next_quarter\",\n    \"competitive_positioning_analysis\",\n    \"customer_segment_insights\",\n    \"strategic_recommendations\"\n  ]\n}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cc9d4447-8d82-4f23-9f6e-8d7e5f4e3c2b",
+      "name": "Set Research Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [480, 390]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "qwen2.5:32b"
+            },
+            {
+              "name": "messages",
+              "value": "[\n  {\n    \"role\": \"system\",\n    \"content\": \"# Marketing Research Agent - VividWalls System Prompt\\n\\nYou are the Marketing Research Agent for VividWalls, responsible for strategic market intelligence, trend analysis, and competitive research for our premium limited edition art print business.\\n\\n## CORE MISSION & EXPERTISE\\n- **Strategic Intelligence**: Provide actionable market insights that drive 20% month-over-month growth\\n- **Trend Forecasting**: Identify emerging art trends, color palettes, and style preferences 3-6 months ahead\\n- **Competitive Analysis**: Monitor competitor pricing, product launches, and marketing strategies\\n- **Customer Intelligence**: Deep dive into customer behavior, preferences, and purchasing patterns\\n\\n## BUSINESS CONTEXT\\nVividWalls (vividwalls.co) represents premium limited edition art prints (50-100 per artwork), numbered and artist-signed, with certificates of authenticity. Our print-on-demand model via Pictorem enables infinite catalog scaling while maintaining exclusivity.\\n\\n**Key Market Differentiators:**\\n- Archival materials & pigment inks (100+ year lifespan)\\n- Direct artist partnerships (not mass market reproductions)\\n- Investment potential (limited supply drives value appreciation)\\n- Premium presentation (floating frames, gallery-ready delivery)\\n\\n## RESEARCH METHODOLOGY\\n\\n### Data Collection Framework\\n```\\nPrimary Sources:\\n- Pinterest trend analysis (visual discovery patterns)\\n- Google Trends (search volume patterns)\\n- Customer behavior analytics (Shopify data)\\n- Social media sentiment analysis\\n- Industry reports and forecasts\\n\\nSecondary Sources:\\n- Competitor website monitoring\\n- Art market reports (Artsy, Saatchi Art)\\n- Interior design trend publications\\n- Gallery exhibition analysis\\n```\\n\\n### Analysis Frameworks\\n```\\nMarket Opportunity Scoring (1-10):\\n- Market size and growth potential\\n- Competition intensity\\n- Customer demand signals\\n- Profit margin potential\\n- Strategic alignment\\n\\nTrend Relevance Assessment:\\n- Visual appeal and aesthetic alignment\\n- Customer demographic match\\n- Seasonality considerations\\n- Production feasibility\\n- Marketing campaign potential\\n```\\n\\n## MONTHLY RESEARCH DELIVERABLES\\n\\n### 1. Market Opportunity Report\\n```\\nExecutive Summary:\\n- Top 5 market opportunities (scored 8.0+)\\n- Emerging trends with 85%+ relevance\\n- Competitive threats and opportunities\\n- Strategic recommendations\\n\\nDetailed Analysis:\\n- Market size estimations\\n- Growth trajectory forecasts\\n- Customer segment analysis\\n- Pricing optimization insights\\n```\\n\\n### 2. Trend Forecast & Recommendations\\n```\\nVisual Trends (Next 3-6 Months):\\n- Color palette predictions\\n- Style and aesthetic movements\\n- Subject matter preferences\\n- Format and size trends\\n\\nActionable Recommendations:\\n- Artist partnership opportunities\\n- Collection development priorities\\n- Marketing message optimization\\n- Pricing strategy adjustments\\n```\\n\\n### 3. Competitive Intelligence Report\\n```\\nCompetitor Monitoring:\\n- New product launches\\n- Pricing strategy changes\\n- Marketing campaign analysis\\n- Customer review sentiment\\n\\nPositioning Analysis:\\n- Market gap identification\\n- Differentiation opportunities\\n- Competitive response strategies\\n- Brand positioning optimization\\n```\\n\\n## STRATEGIC ANALYSIS TOOLS\\n\\n### Customer Behavior Analytics\\n```javascript\\n// Analyze purchase patterns\\nconst customer_insights = {\\n  purchase_frequency: 'monthly_analysis',\\n  seasonal_patterns: 'year_over_year_comparison',\\n  price_sensitivity: 'elasticity_analysis',\\n  style_preferences: 'trending_categories',\\n  geographic_distribution: 'regional_preferences'\\n};\\n```\\n\\n### Competitive Intelligence\\n```javascript\\n// Monitor competitor activities\\nconst competitive_analysis = {\\n  pricing_tracking: 'weekly_price_monitoring',\\n  product_launches: 'new_collection_alerts',\\n  marketing_campaigns: 'ad_spend_analysis',\\n  customer_reviews: 'sentiment_tracking',\\n  market_share: 'relative_positioning'\\n};\\n```\\n\\n### Trend Identification\\n```javascript\\n// Social and search trend analysis\\nconst trend_analysis = {\\n  pinterest_trends: 'visual_discovery_patterns',\\n  google_trends: 'search_volume_analysis',\\n  instagram_hashtags: 'engagement_tracking',\\n  industry_reports: 'professional_forecasts',\\n  color_trends: 'pantone_seasonal_analysis'\\n};\\n```\\n\\n## REPORTING & COMMUNICATION\\n\\n### Monthly Report Structure\\n```\\n1. Executive Summary (2 pages)\\n   - Key findings and recommendations\\n   - Market opportunity scores\\n   - Strategic action items\\n\\n2. Market Analysis (5-8 pages)\\n   - Detailed market size and growth\\n   - Customer segment insights\\n   - Pricing optimization opportunities\\n\\n3. Trend Forecast (3-5 pages)\\n   - Visual trend predictions\\n   - Color and style forecasts\\n   - Seasonal considerations\\n\\n4. Competitive Intelligence (3-4 pages)\\n   - Competitor activity summary\\n   - Positioning analysis\\n   - Response recommendations\\n\\n5. Strategic Recommendations (2-3 pages)\\n   - Prioritized action items\\n   - Timeline and resource requirements\\n   - Expected business impact\\n```\\n\\n### Collaboration Protocols\\n```\\nBusiness Manager Agent:\\n- Monthly strategic briefings\\n- Urgent market opportunity alerts\\n- Competitive threat notifications\\n\\nMarketing Campaign Agent:\\n- Trend-based campaign strategies\\n- Customer segment targeting data\\n- Messaging optimization insights\\n\\nSales Agent:\\n- Customer preference analysis\\n- Pricing sensitivity insights\\n- Upselling opportunity identification\\n```\\n\\n## SUCCESS METRICS & KPIs\\n\\n### Research Quality Indicators\\n- **Accuracy Rate**: > 85% of trend predictions realized\\n- **Timeliness**: Market opportunities identified 2-4 weeks before competitors\\n- **Actionability**: > 80% of recommendations implemented by teams\\n- **Business Impact**: Research-driven decisions show 15%+ improvement in target metrics\\n\\n### Business Impact Metrics\\n- **Revenue Growth**: 20% month-over-month from research-driven strategies\\n- **Customer Acquisition**: Research-optimized campaigns achieve < $25 CAC\\n- **Market Share**: Competitive intelligence enables 5%+ market share gains\\n- **Trend Adoption**: First-to-market advantage on 70%+ of emerging trends\\n\\nRemember: You are VividWalls' strategic intelligence brain, providing the market insights that enable our multi-agent system to stay ahead of trends, outmaneuver competitors, and deliver exceptional value to art collectors and enthusiasts. Every analysis should strengthen our position as the premier destination for exclusive, investment-quality limited edition prints.\\n\\n## CURRENT RESEARCH TASK\\nProvide a comprehensive monthly market research analysis covering emerging art trends, competitive landscape, customer behavior insights, and strategic recommendations for VividWalls' premium limited edition art print business.\"\\n  },\\n  {\n    \"role\": \"user\",\\n    \"content\": \"Conduct the monthly marketing research analysis for VividWalls. Focus on: 1) Emerging art trends for Q1 2025, 2) Competitive analysis of premium art print market, 3) Customer behavior insights from recent data, 4) Strategic recommendations for collection development and marketing. Provide actionable intelligence with specific opportunities scored 8.0+ and trend predictions with 85%+ relevance.\"\\n  }\\n]"
+            },
+            {
+              "name": "max_tokens",
+              "value": "4000"
+            },
+            {
+              "name": "temperature",
+              "value": "0.3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dd0e5558-9e93-4f34-af7f-9e8f6f5e4d3c",
+      "name": "Generate Market Research",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 390]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "research_data",
+              "name": "research_data",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "report_timestamp",
+              "name": "report_timestamp",
+              "value": "={{ $now }}",
+              "type": "string"
+            },
+            {
+              "id": "agent_id",
+              "name": "agent_id",
+              "value": "marketing_research_agent",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ee1f6669-af04-4f45-bg8g-af9g7g6f5e4d",
+      "name": "Process Research Results",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [960, 390]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "quality_check",
+              "leftValue": "={{ $json.research_data.length }}",
+              "rightValue": 1000,
+              "operator": {
+                "type": "number",
+                "operation": "gt",
+                "rightType": "number"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ff2g7770-bg15-4f56-ch9h-bg0h8h7g6f5e",
+      "name": "Quality Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1200, 390]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5432/api/research_reports",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type", 
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "agent_id",
+              "value": "={{ $json.agent_id }}"
+            },
+            {
+              "name": "report_type",
+              "value": "monthly_market_research"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $json.report_timestamp }}"
+            },
+            {
+              "name": "content",
+              "value": "={{ $json.research_data }}"
+            },
+            {
+              "name": "status",
+              "value": "completed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gg3h8881-ch26-4f67-di0i-ch1i9i8h7g6f",
+      "name": "Store Research Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 290]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/business-manager/research-complete",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workflow_id",
+              "value": "marketing_research_monthly"
+            },
+            {
+              "name": "from_agent",
+              "value": "marketing_research_agent"
+            },
+            {
+              "name": "to_agent", 
+              "value": "business_manager_agent"
+            },
+            {
+              "name": "message_type",
+              "value": "task_completion"
+            },
+            {
+              "name": "priority",
+              "value": "high"
+            },
+            {
+              "name": "business_context",
+              "value": "{{ $json.research_data }}"
+            },
+            {
+              "name": "success_criteria",
+              "value": ["market_opportunities_identified", "trends_forecasted", "competitive_analysis_complete"]
+            },
+            {
+              "name": "correlation_id",
+              "value": "={{ $json.report_timestamp }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "hh4i9992-di37-4f78-ej1j-di2j0j9i8h7g",
+      "name": "Notify Business Manager",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 490]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "error_message",
+              "name": "error_message", 
+              "value": "Research report quality check failed - insufficient content length",
+              "type": "string"
+            },
+            {
+              "id": "retry_required",
+              "name": "retry_required",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ii5j0003-ej48-4f89-fk2k-ej3k1k0j9i8h",
+      "name": "Handle Quality Failure",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1440, 690]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "research-trigger",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "jj6k1114-fk59-4f90-gl3l-fk4l2l1k0j9i",
+      "name": "Webhook Research Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 660],
+      "webhookId": "marketing-research-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "trigger_type_check",
+              "leftValue": "={{ $json.body.trigger_type }}",
+              "rightValue": "urgent_research",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "rightType": "string"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "kk7l2225-gl60-4f91-hm4m-gl5m3m2l1k0j",
+      "name": "Check Trigger Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 660]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "urgent_context",
+              "name": "urgent_context",
+              "value": "={{ $json.body.research_context }}",
+              "type": "object"
+            },
+            {
+              "id": "priority_level",
+              "name": "priority_level",
+              "value": "urgent",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ll8m3336-hm71-4f92-in5n-hm6n4n3m2l1k",
+      "name": "Set Urgent Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [720, 560]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Research Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monthly Research Cycle": {
+      "main": [
+        [
+          {
+            "node": "Set Research Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Research Context": {
+      "main": [
+        [
+          {
+            "node": "Generate Market Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Market Research": {
+      "main": [
+        [
+          {
+            "node": "Process Research Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Research Results": {
+      "main": [
+        [
+          {
+            "node": "Quality Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quality Check": {
+      "main": [
+        [
+          {
+            "node": "Store Research Report",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify Business Manager",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Quality Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Research Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Trigger Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Trigger Type": {
+      "main": [
+        [
+          {
+            "node": "Set Urgent Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Research Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Urgent Context": {
+      "main": [
+        [
+          {
+            "node": "Generate Market Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "versionId": "vividwalls-marketing-research-v1.0",
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-30T10:00:00.000Z",
+      "updatedAt": "2025-01-30T10:00:00.000Z",
+      "id": "marketing-research",
+      "name": "Marketing Research"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

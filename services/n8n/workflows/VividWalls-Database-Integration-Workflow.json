@@ -1,0 +1,404 @@
+{
+  "name": "VividWalls Database Integration & Search",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vividwalls-database-search",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "database-search-webhook",
+      "name": "Database Search Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "vividwalls-db-search"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse search request and prepare database queries\nconst body = $input.first().json.body;\n\n// Extract search parameters from the prompt chain workflow\nconst searchParams = body.searchParameters || {};\nconst queryType = body.queryType || 'hybrid'; // 'vector', 'tag', 'category', 'color', 'hybrid'\nconst userInquiry = body.originalInquiry || body.query || '';\nconst sessionId = body.sessionId || `session_${Date.now()}`;\nconst userId = body.userId || 'anonymous';\n\n// Validate required parameters\nif (!searchParams && !userInquiry) {\n  throw new Error('Either searchParameters or query is required');\n}\n\n// Prepare database query parameters\nconst dbQueries = {\n  // Vector similarity search\n  vectorSearch: {\n    enabled: queryType === 'vector' || queryType === 'hybrid',\n    searchText: userInquiry,\n    embeddingType: 'comprehensive',\n    similarityThreshold: 0.7,\n    maxResults: 20\n  },\n  \n  // Tag-based search\n  tagSearch: {\n    enabled: queryType === 'tag' || queryType === 'hybrid',\n    primaryTags: searchParams.primaryTags || [],\n    secondaryTags: searchParams.secondaryTags || [],\n    tagSources: ['ai_analysis', 'manual', 'auto_generated'],\n    minConfidence: 0.6,\n    maxResults: 15\n  },\n  \n  // Category and collection search\n  categorySearch: {\n    enabled: queryType === 'category' || queryType === 'hybrid',\n    collections: searchParams.collections || [],\n    roomTypes: searchParams.roomTypes || [],\n    moodClassifications: searchParams.moodClassifications || [],\n    styleCategories: searchParams.styleCategories || [],\n    maxResults: 12\n  },\n  \n  // Color-based search\n  colorSearch: {\n    enabled: queryType === 'color' || queryType === 'hybrid',\n    colorCategories: searchParams.colorCategories || [],\n    specificColors: searchParams.specificColors || [],\n    colorTemperature: searchParams.colorTemperature || null,\n    maxResults: 10\n  },\n  \n  // Multi-criteria search (uses the stored function)\n  multiCriteriaSearch: {\n    enabled: queryType === 'hybrid',\n    searchTags: [...(searchParams.primaryTags || []), ...(searchParams.secondaryTags || [])],\n    searchCollections: searchParams.collections || [],\n    searchMoods: searchParams.moodClassifications || [],\n    searchRooms: searchParams.roomTypes || [],\n    colorPreferences: [...(searchParams.colorCategories || []), ...(searchParams.specificColors || [])],\n    priceMin: searchParams.priceRange?.min || null,\n    priceMax: searchParams.priceRange?.max || null,\n    maxResults: 25\n  }\n};\n\n// Log search query for analytics\nconst searchLog = {\n  userId: userId,\n  sessionId: sessionId,\n  queryText: userInquiry,\n  searchParameters: searchParams,\n  searchType: queryType,\n  timestamp: new Date().toISOString()\n};\n\nreturn {\n  searchRequest: {\n    originalInquiry: userInquiry,\n    searchParameters: searchParams,\n    queryType: queryType,\n    userId: userId,\n    sessionId: sessionId\n  },\n  databaseQueries: dbQueries,\n  searchLog: searchLog,\n  step: 'query_preparation'\n};"
+      },
+      "id": "prepare-database-queries",
+      "name": "Prepare Database Queries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Vector similarity search for products\nSELECT \n    p.id,\n    p.handle,\n    p.title,\n    p.collection,\n    pa.primary_mood,\n    pa.dominant_colors,\n    pa.recommended_rooms,\n    pi.cdn_url as image_url,\n    pv.price,\n    pv.frame_size,\n    1 - (pe.embedding <=> $1::vector) AS similarity_score\nFROM product_embeddings pe\nJOIN products p ON pe.product_id = p.id\nLEFT JOIN product_analysis pa ON p.id = pa.product_id\nLEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = true\nLEFT JOIN product_variants pv ON p.id = pv.product_id\nWHERE pe.embedding_type = $2\nAND 1 - (pe.embedding <=> $1::vector) >= $3\nAND p.published = true\nORDER BY pe.embedding <=> $1::vector\nLIMIT $4;",
+        "additionalFields": {
+          "mode": "list"
+        }
+      },
+      "id": "vector-similarity-search",
+      "name": "Vector Similarity Search",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 200],
+      "credentials": {
+        "postgres": {
+          "id": "vividwalls-postgres",
+          "name": "VividWalls PostgreSQL"
+        }
+      },
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Tag-based product search\nSELECT DISTINCT\n    p.id,\n    p.handle,\n    p.title,\n    p.collection,\n    pa.primary_mood,\n    pa.dominant_colors,\n    pa.recommended_rooms,\n    pi.cdn_url as image_url,\n    pv.price,\n    pv.frame_size,\n    AVG(pt.confidence_score) as tag_confidence,\n    COUNT(pt.tag_id) as matching_tags\nFROM products p\nJOIN product_tags pt ON p.id = pt.product_id\nJOIN tags t ON pt.tag_id = t.id\nLEFT JOIN product_analysis pa ON p.id = pa.product_id\nLEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = true\nLEFT JOIN product_variants pv ON p.id = pv.product_id\nWHERE (\n    ($1::text[] IS NULL OR t.name = ANY($1::text[])) OR\n    ($2::text[] IS NULL OR t.name = ANY($2::text[]))\n)\nAND pt.tag_source = ANY($3::text[])\nAND pt.confidence_score >= $4\nAND p.published = true\nGROUP BY p.id, p.handle, p.title, p.collection, pa.primary_mood, pa.dominant_colors, pa.recommended_rooms, pi.cdn_url, pv.price, pv.frame_size\nHAVING COUNT(pt.tag_id) > 0\nORDER BY AVG(pt.confidence_score) DESC, COUNT(pt.tag_id) DESC\nLIMIT $5;",
+        "additionalFields": {
+          "mode": "list"
+        }
+      },
+      "id": "tag-based-search",
+      "name": "Tag-Based Search",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "vividwalls-postgres",
+          "name": "VividWalls PostgreSQL"
+        }
+      },
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Category and collection-based search\nSELECT DISTINCT\n    p.id,\n    p.handle,\n    p.title,\n    p.collection,\n    pa.primary_mood,\n    pa.secondary_mood,\n    pa.dominant_colors,\n    pa.recommended_rooms,\n    pa.style_compatibility,\n    pi.cdn_url as image_url,\n    pv.price,\n    pv.frame_size,\n    (\n        CASE WHEN $1::text[] IS NULL OR p.collection = ANY($1::text[]) THEN 2 ELSE 0 END +\n        CASE WHEN $2::text[] IS NULL OR pa.recommended_rooms && $2::text[] THEN 2 ELSE 0 END +\n        CASE WHEN $3::text[] IS NULL OR pa.primary_mood = ANY($3::text[]) THEN 1 ELSE 0 END +\n        CASE WHEN $4::text[] IS NULL OR pa.style_compatibility && $4::text[] THEN 1 ELSE 0 END\n    ) as category_score\nFROM products p\nLEFT JOIN product_analysis pa ON p.id = pa.product_id\nLEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = true\nLEFT JOIN product_variants pv ON p.id = pv.product_id\nWHERE p.published = true\nAND (\n    ($1::text[] IS NULL OR p.collection = ANY($1::text[])) OR\n    ($2::text[] IS NULL OR pa.recommended_rooms && $2::text[]) OR\n    ($3::text[] IS NULL OR pa.primary_mood = ANY($3::text[])) OR\n    ($4::text[] IS NULL OR pa.style_compatibility && $4::text[])\n)\nORDER BY category_score DESC, p.title\nLIMIT $5;",
+        "additionalFields": {
+          "mode": "list"
+        }
+      },
+      "id": "category-collection-search",
+      "name": "Category & Collection Search",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 400],
+      "credentials": {
+        "postgres": {
+          "id": "vividwalls-postgres",
+          "name": "VividWalls PostgreSQL"
+        }
+      },
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Color-based product search\nSELECT DISTINCT\n    p.id,\n    p.handle,\n    p.title,\n    p.collection,\n    pa.primary_mood,\n    pa.dominant_colors,\n    pa.color_temperature,\n    pa.color_harmony,\n    pa.recommended_rooms,\n    pi.cdn_url as image_url,\n    pv.price,\n    pv.frame_size,\n    (\n        CASE WHEN $1::text[] IS NULL OR pa.dominant_colors && $1::text[] THEN 3 ELSE 0 END +\n        CASE WHEN $2::text[] IS NULL OR pa.dominant_colors && $2::text[] THEN 2 ELSE 0 END +\n        CASE WHEN $3::text IS NULL OR pa.color_temperature = $3::text THEN 1 ELSE 0 END\n    ) as color_score\nFROM products p\nLEFT JOIN product_analysis pa ON p.id = pa.product_id\nLEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = true\nLEFT JOIN product_variants pv ON p.id = pv.product_id\nWHERE p.published = true\nAND (\n    ($1::text[] IS NULL OR pa.dominant_colors && $1::text[]) OR\n    ($2::text[] IS NULL OR pa.dominant_colors && $2::text[]) OR\n    ($3::text IS NULL OR pa.color_temperature = $3::text)\n)\nHAVING (\n    CASE WHEN $1::text[] IS NULL OR pa.dominant_colors && $1::text[] THEN 3 ELSE 0 END +\n    CASE WHEN $2::text[] IS NULL OR pa.dominant_colors && $2::text[] THEN 2 ELSE 0 END +\n    CASE WHEN $3::text IS NULL OR pa.color_temperature = $3::text THEN 1 ELSE 0 END\n) > 0\nORDER BY color_score DESC, p.title\nLIMIT $4;",
+        "additionalFields": {
+          "mode": "list"
+        }
+      },
+      "id": "color-based-search",
+      "name": "Color-Based Search",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 500],
+      "credentials": {
+        "postgres": {
+          "id": "vividwalls-postgres",
+          "name": "VividWalls PostgreSQL"
+        }
+      },
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Multi-criteria search using stored function\nSELECT \n    product_id as id,\n    title,\n    collection,\n    primary_mood,\n    match_score,\n    p.handle,\n    pa.dominant_colors,\n    pa.recommended_rooms,\n    pa.style_compatibility,\n    pi.cdn_url as image_url,\n    pv.price,\n    pv.frame_size\nFROM search_products_multi_criteria(\n    $1::text[], -- search_tags\n    $2::text[], -- search_collections  \n    $3::text[], -- search_moods\n    $4::text[], -- search_rooms\n    $5::text[], -- color_preferences\n    $6::decimal, -- price_min\n    $7::decimal, -- price_max\n    $8::integer  -- max_results\n) spm\nJOIN products p ON spm.product_id = p.id\nLEFT JOIN product_analysis pa ON p.id = pa.product_id\nLEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = true\nLEFT JOIN product_variants pv ON p.id = pv.product_id\nORDER BY match_score DESC, title;",
+        "additionalFields": {
+          "mode": "list"
+        }
+      },
+      "id": "multi-criteria-search",
+      "name": "Multi-Criteria Search",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 600],
+      "credentials": {
+        "postgres": {
+          "id": "vividwalls-postgres",
+          "name": "VividWalls PostgreSQL"
+        }
+      },
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "search_queries",
+        "columns": "user_id, session_id, query_text, search_parameters, search_type, results_count, created_at",
+        "additionalFields": {
+          "mode": "defineBelow",
+          "values": {
+            "user_id": "={{ $('prepare-database-queries').first().json.searchLog.userId }}",
+            "session_id": "={{ $('prepare-database-queries').first().json.searchLog.sessionId }}",
+            "query_text": "={{ $('prepare-database-queries').first().json.searchLog.queryText }}",
+            "search_parameters": "={{ JSON.stringify($('prepare-database-queries').first().json.searchLog.searchParameters) }}",
+            "search_type": "={{ $('prepare-database-queries').first().json.searchLog.searchType }}",
+            "results_count": "={{ $input.all().reduce((sum, result) => sum + (result.json?.length || 0), 0) }}",
+            "created_at": "={{ new Date().toISOString() }}"
+          }
+        }
+      },
+      "id": "log-search-query",
+      "name": "Log Search Query",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [900, 700],
+      "credentials": {
+        "postgres": {
+          "id": "vividwalls-postgres",
+          "name": "VividWalls PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate and process all search results\nconst allInputs = $input.all();\nconst searchRequest = $('prepare-database-queries').first().json.searchRequest;\n\n// Collect results from different search methods\nconst searchResults = {\n  vectorResults: [],\n  tagResults: [],\n  categoryResults: [],\n  colorResults: [],\n  multiCriteriaResults: []\n};\n\n// Map results to their respective categories\nallInputs.forEach(input => {\n  const nodeName = input.node;\n  const results = Array.isArray(input.json) ? input.json : [input.json];\n  \n  switch (nodeName) {\n    case 'vector-similarity-search':\n      searchResults.vectorResults = results;\n      break;\n    case 'tag-based-search':\n      searchResults.tagResults = results;\n      break;\n    case 'category-collection-search':\n      searchResults.categoryResults = results;\n      break;\n    case 'color-based-search':\n      searchResults.colorResults = results;\n      break;\n    case 'multi-criteria-search':\n      searchResults.multiCriteriaResults = results;\n      break;\n  }\n});\n\n// Deduplicate and score products across all search methods\nconst productScores = new Map();\nconst productDetails = new Map();\n\n// Helper function to add product with scoring\nfunction addProduct(product, searchType, baseScore, bonus = 0) {\n  const productId = product.id;\n  \n  if (!productDetails.has(productId)) {\n    productDetails.set(productId, {\n      id: product.id,\n      handle: product.handle,\n      title: product.title,\n      collection: product.collection,\n      primaryMood: product.primary_mood,\n      dominantColors: product.dominant_colors,\n      recommendedRooms: product.recommended_rooms,\n      imageUrl: product.image_url,\n      price: product.price,\n      frameSize: product.frame_size,\n      searchMatches: []\n    });\n    productScores.set(productId, 0);\n  }\n  \n  // Add search match information\n  productDetails.get(productId).searchMatches.push({\n    searchType: searchType,\n    score: baseScore,\n    bonus: bonus,\n    details: {\n      similarityScore: product.similarity_score,\n      tagConfidence: product.tag_confidence,\n      matchingTags: product.matching_tags,\n      categoryScore: product.category_score,\n      colorScore: product.color_score,\n      matchScore: product.match_score\n    }\n  });\n  \n  // Update total score\n  const currentScore = productScores.get(productId);\n  productScores.set(productId, currentScore + baseScore + bonus);\n}\n\n// Process vector similarity results (highest weight)\nsearchResults.vectorResults.forEach(product => {\n  const score = (product.similarity_score || 0) * 100; // Scale to 0-100\n  const bonus = product.similarity_score > 0.8 ? 20 : 0; // Bonus for high similarity\n  addProduct(product, 'vector', score, bonus);\n});\n\n// Process tag-based results\nsearchResults.tagResults.forEach(product => {\n  const score = (product.tag_confidence || 0) * 50 + (product.matching_tags || 0) * 10;\n  const bonus = product.matching_tags > 3 ? 15 : 0; // Bonus for multiple tag matches\n  addProduct(product, 'tag', score, bonus);\n});\n\n// Process category results\nsearchResults.categoryResults.forEach(product => {\n  const score = (product.category_score || 0) * 15;\n  const bonus = product.category_score > 4 ? 10 : 0; // Bonus for high category match\n  addProduct(product, 'category', score, bonus);\n});\n\n// Process color results\nsearchResults.colorResults.forEach(product => {\n  const score = (product.color_score || 0) * 12;\n  const bonus = product.color_score > 5 ? 8 : 0; // Bonus for strong color match\n  addProduct(product, 'color', score, bonus);\n});\n\n// Process multi-criteria results (balanced scoring)\nsearchResults.multiCriteriaResults.forEach(product => {\n  const score = (product.match_score || 0) * 25;\n  const bonus = product.match_score > 3 ? 12 : 0; // Bonus for high multi-criteria match\n  addProduct(product, 'multi_criteria', score, bonus);\n});\n\n// Sort products by total score and create final results\nconst sortedProducts = Array.from(productDetails.values())\n  .map(product => ({\n    ...product,\n    totalScore: productScores.get(product.id),\n    searchMatchCount: product.searchMatches.length,\n    averageScore: productScores.get(product.id) / product.searchMatches.length\n  }))\n  .sort((a, b) => {\n    // Primary sort: total score\n    if (b.totalScore !== a.totalScore) {\n      return b.totalScore - a.totalScore;\n    }\n    // Secondary sort: number of search matches (diversity)\n    if (b.searchMatchCount !== a.searchMatchCount) {\n      return b.searchMatchCount - a.searchMatchCount;\n    }\n    // Tertiary sort: alphabetical by title\n    return a.title.localeCompare(b.title);\n  });\n\n// Prepare final response\nconst finalResults = {\n  searchRequest: searchRequest,\n  searchResults: {\n    totalProducts: sortedProducts.length,\n    searchMethods: {\n      vector: searchResults.vectorResults.length,\n      tag: searchResults.tagResults.length,\n      category: searchResults.categoryResults.length,\n      color: searchResults.colorResults.length,\n      multiCriteria: searchResults.multiCriteriaResults.length\n    },\n    products: sortedProducts.slice(0, 20), // Return top 20 results\n    searchAnalytics: {\n      averageScore: sortedProducts.reduce((sum, p) => sum + p.totalScore, 0) / sortedProducts.length,\n      scoreDistribution: {\n        high: sortedProducts.filter(p => p.totalScore > 80).length,\n        medium: sortedProducts.filter(p => p.totalScore > 40 && p.totalScore <= 80).length,\n        low: sortedProducts.filter(p => p.totalScore <= 40).length\n      },\n      diversityScore: sortedProducts.reduce((sum, p) => sum + p.searchMatchCount, 0) / sortedProducts.length\n    }\n  },\n  timestamp: new Date().toISOString(),\n  processingTime: Date.now() - new Date(searchRequest.timestamp || Date.now()).getTime()\n};\n\nreturn finalResults;"
+      },
+      "id": "aggregate-search-results",
+      "name": "Aggregate Search Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {
+          "systemMessage": "You are VividWalls Product Enhancement AI, specialized in enriching database search results with detailed analysis and presentation optimization.\n\n## YOUR ROLE:\nAnalyze aggregated database search results and enhance them with:\n- Detailed product insights and recommendations\n- Room-specific placement suggestions\n- Style compatibility analysis\n- Personalized presentation strategies\n- Cross-selling and upselling opportunities\n\n## ENHANCEMENT FRAMEWORK:\n\n### PRODUCT ANALYSIS:\n1. **Relevance Assessment**: Evaluate how well each product matches the original user inquiry\n2. **Style Harmony**: Analyze style compatibility and complementary pieces\n3. **Room Suitability**: Provide specific room placement and sizing recommendations\n4. **Color Coordination**: Suggest color schemes and complementary elements\n5. **Mood Impact**: Explain the emotional and psychological effects\n\n### PRESENTATION OPTIMIZATION:\n1. **Narrative Flow**: Create compelling product stories and descriptions\n2. **Visual Hierarchy**: Recommend optimal product ordering and grouping\n3. **Decision Support**: Provide clear reasoning for each recommendation\n4. **Comparison Framework**: Highlight differences and similarities between options\n5. **Action Guidance**: Suggest next steps and decision-making criteria\n\n### PERSONALIZATION STRATEGIES:\n1. **User Journey Mapping**: Adapt recommendations based on browsing behavior\n2. **Preference Learning**: Identify patterns in user selections\n3. **Context Awareness**: Consider room type, style preferences, and budget\n4. **Progressive Disclosure**: Layer information based on user engagement\n5. **Conversion Optimization**: Guide users toward purchase decisions\n\n## OUTPUT FORMAT:\nProvide enhanced product data with detailed insights:\n\n```json\n{\n  \"enhancedProducts\": [\n    {\n      \"productId\": \"uuid\",\n      \"title\": \"Product Title\",\n      \"collection\": \"Collection Name\",\n      \"enhancedDescription\": \"Rich, contextual description\",\n      \"relevanceAnalysis\": {\n        \"matchStrength\": 0.95,\n        \"matchReasons\": [\"specific reasons why this matches\"],\n        \"userBenefits\": [\"benefits for this specific user\"]\n      },\n      \"roomRecommendations\": {\n        \"primaryRoom\": \"living_room\",\n        \"placementSuggestions\": [\"above sofa\", \"focal wall\"],\n        \"sizingAdvice\": \"36x48 recommended for this space\",\n        \"lightingConsiderations\": \"Best with natural light\"\n      },\n      \"styleAnalysis\": {\n        \"designStyle\": \"modern minimalist\",\n        \"colorHarmony\": \"Cool tones create calming atmosphere\",\n        \"complementaryPieces\": [\"product suggestions\"],\n        \"styleCompatibility\": [\"compatible interior styles\"]\n      },\n      \"emotionalImpact\": {\n        \"primaryMood\": \"calming\",\n        \"psychologicalBenefits\": [\"stress reduction\", \"focus enhancement\"],\n        \"atmosphereCreation\": \"Creates serene, professional environment\"\n      },\n      \"presentationStrategy\": {\n        \"priority\": \"primary|secondary|alternative\",\n        \"presentationOrder\": 1,\n        \"grouping\": \"hero_selection\",\n        \"callToAction\": \"View in your space\",\n        \"comparisonPoints\": [\"key differentiators\"]\n      },\n      \"commercialInsights\": {\n        \"pricePositioning\": \"premium|mid-range|accessible\",\n        \"valueProposition\": \"Key selling points\",\n        \"crossSellOpportunities\": [\"related products\"],\n        \"urgencyFactors\": [\"limited edition\", \"popular choice\"]\n      }\n    }\n  ],\n  \"presentationFlow\": {\n    \"heroProduct\": \"productId\",\n    \"productGroupings\": {\n      \"primaryChoices\": [\"top 3-4 products\"],\n      \"alternativeOptions\": [\"2-3 different style options\"],\n      \"budgetFriendly\": [\"accessible price points\"],\n      \"premiumSelections\": [\"high-end options\"]\n    },\n    \"narrativeStructure\": {\n      \"openingMessage\": \"Engaging introduction\",\n      \"productStories\": [\"individual product narratives\"],\n      \"comparisonFramework\": \"How to choose between options\",\n      \"closingGuidance\": \"Next steps and decision support\"\n    }\n  },\n  \"personalizationInsights\": {\n    \"userProfile\": \"Inferred user preferences and style\",\n    \"recommendationStrategy\": \"Approach used for this user\",\n    \"learningOpportunities\": [\"What to track for future recommendations\"],\n    \"adaptationSuggestions\": [\"How to refine based on user feedback\"]\n  },\n  \"confidence\": 0.92,\n  \"reasoning\": \"Overall enhancement strategy and logic\"\n}\n```\n\n## INSTRUCTIONS:\n1. **Analyze each product** in the context of the original user inquiry\n2. **Create compelling narratives** that connect products to user needs\n3. **Optimize presentation flow** for maximum engagement and conversion\n4. **Provide actionable insights** for room placement and styling\n5. **Enable informed decisions** through clear comparisons and guidance\n6. **Personalize recommendations** based on inferred user preferences\n\nEnhance the database search results with detailed analysis and presentation optimization."
+        },
+        "prompt": "=Enhance these VividWalls database search results with detailed analysis and presentation optimization:\n\nOriginal User Inquiry: \"{{ $json.searchRequest.originalInquiry }}\"\n\nSearch Results Summary:\n- Total Products Found: {{ $json.searchResults.totalProducts }}\n- Search Methods Used: {{ JSON.stringify($json.searchResults.searchMethods) }}\n- Average Score: {{ $json.searchResults.searchAnalytics.averageScore }}\n\nTop Products from Database:\n{{ JSON.stringify($json.searchResults.products.slice(0, 10), null, 2) }}\n\nUser Context:\n- User ID: {{ $json.searchRequest.userId }}\n- Session ID: {{ $json.searchRequest.sessionId }}\n- Query Type: {{ $json.searchRequest.queryType }}\n- Search Parameters: {{ JSON.stringify($json.searchRequest.searchParameters) }}\n\nProvide enhanced product analysis with detailed insights, room recommendations, style analysis, and optimized presentation strategy. Focus on creating compelling narratives that help users make informed decisions about artwork for their specific spaces and preferences.",
+        "model": "gpt-4-turbo-preview"
+      },
+      "id": "enhance-product-results",
+      "name": "Enhance Product Results",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process enhanced results and prepare final response\nconst aiResponse = $input.first().json.choices?.[0]?.message?.content || '';\nconst searchResults = $('aggregate-search-results').first().json;\n\n// Parse JSON response from AI\nlet enhancedResults;\ntry {\n  const jsonMatch = aiResponse.match(/```json\\s*([\\s\\S]*?)\\s*```/) || aiResponse.match(/{[\\s\\S]*}/);\n  if (jsonMatch) {\n    enhancedResults = JSON.parse(jsonMatch[1] || jsonMatch[0]);\n  } else {\n    throw new Error('No valid JSON found in AI response');\n  }\n} catch (error) {\n  // Fallback: create basic enhanced structure\n  enhancedResults = {\n    enhancedProducts: searchResults.searchResults.products.slice(0, 5).map((product, index) => ({\n      productId: product.id,\n      title: product.title,\n      collection: product.collection,\n      enhancedDescription: `${product.title} from the ${product.collection} collection`,\n      relevanceAnalysis: {\n        matchStrength: 0.8,\n        matchReasons: ['Database match'],\n        userBenefits: ['Suitable for your space']\n      },\n      presentationStrategy: {\n        priority: index === 0 ? 'primary' : 'secondary',\n        presentationOrder: index + 1\n      }\n    })),\n    confidence: 0.7,\n    reasoning: 'Fallback enhancement due to parsing error'\n  };\n}\n\n// Merge enhanced data with original search results\nconst finalResponse = {\n  // Original search data\n  searchRequest: searchResults.searchRequest,\n  searchResults: searchResults.searchResults,\n  \n  // Enhanced product data\n  enhancedProducts: enhancedResults.enhancedProducts || [],\n  presentationFlow: enhancedResults.presentationFlow || {},\n  personalizationInsights: enhancedResults.personalizationInsights || {},\n  \n  // Metadata and analytics\n  enhancementMetadata: {\n    enhancementConfidence: enhancedResults.confidence || 0.7,\n    enhancementReasoning: enhancedResults.reasoning || 'Standard enhancement applied',\n    enhancedProductCount: enhancedResults.enhancedProducts?.length || 0,\n    processingChain: [\n      'database_search',\n      'result_aggregation', \n      'ai_enhancement',\n      'response_preparation'\n    ]\n  },\n  \n  // Performance metrics\n  performanceMetrics: {\n    totalProcessingTime: searchResults.processingTime,\n    databaseQueryTime: searchResults.processingTime * 0.6, // Estimated\n    enhancementTime: Date.now() - new Date(searchResults.timestamp).getTime(),\n    searchEfficiency: {\n      resultsPerMethod: searchResults.searchResults.searchMethods,\n      deduplicationRate: 1 - (searchResults.searchResults.totalProducts / Object.values(searchResults.searchResults.searchMethods).reduce((a, b) => a + b, 0)),\n      averageRelevanceScore: searchResults.searchResults.searchAnalytics.averageScore\n    }\n  },\n  \n  // Response metadata\n  responseMetadata: {\n    timestamp: new Date().toISOString(),\n    version: '1.0',\n    source: 'vividwalls-database-integration',\n    cacheability: {\n      cacheable: true,\n      ttl: 3600, // 1 hour\n      cacheKey: `search_${searchResults.searchRequest.sessionId}_${Date.now()}`\n    }\n  },\n  \n  // Next steps and recommendations\n  nextSteps: {\n    primaryActions: [\n      'view_product_details',\n      'visualize_in_room',\n      'save_to_favorites',\n      'request_consultation'\n    ],\n    secondaryActions: [\n      'refine_search',\n      'explore_collection',\n      'view_similar_products',\n      'share_selections'\n    ],\n    analyticsEvents: [\n      'search_results_viewed',\n      'product_impression',\n      'enhancement_applied'\n    ]\n  }\n};\n\nreturn finalResponse;"
+      },
+      "id": "prepare-final-response",
+      "name": "Prepare Final Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "X-Search-Methods",
+                "value": "vector,tag,category,color,multi-criteria"
+              },
+              {
+                "name": "X-Enhancement-Applied",
+                "value": "true"
+              },
+              {
+                "name": "X-Processing-Time",
+                "value": "={{ $json.performanceMetrics.totalProcessingTime }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "send-enhanced-response",
+      "name": "Send Enhanced Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1780, 400]
+    }
+  ],
+  "connections": {
+    "Database Search Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Database Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Database Queries": {
+      "main": [
+        [
+          {
+            "node": "Vector Similarity Search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tag-Based Search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Category & Collection Search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Color-Based Search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Multi-Criteria Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Similarity Search": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Search Results",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Search Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag-Based Search": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Search Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Category & Collection Search": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Search Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Color-Based Search": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Search Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Multi-Criteria Search": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Search Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Search Results": {
+      "main": [
+        [
+          {
+            "node": "Enhance Product Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enhance Product Results": {
+      "main": [
+        [
+          {
+            "node": "Prepare Final Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Final Response": {
+      "main": [
+        [
+          {
+            "node": "Send Enhanced Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-02-23T12:00:00.000Z",
+      "updatedAt": "2025-02-23T12:00:00.000Z",
+      "id": "vividwalls",
+      "name": "VividWalls"
+    },
+    {
+      "createdAt": "2025-02-23T12:00:00.000Z",
+      "updatedAt": "2025-02-23T12:00:00.000Z",
+      "id": "database-integration",
+      "name": "Database Integration"
+    },
+    {
+      "createdAt": "2025-02-23T12:00:00.000Z",
+      "updatedAt": "2025-02-23T12:00:00.000Z",
+      "id": "search-enhancement",
+      "name": "Search Enhancement"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-02-23T12:00:00.000Z",
+  "versionId": "1"
+} 

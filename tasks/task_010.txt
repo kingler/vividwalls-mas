@@ -1,0 +1,25 @@
+# Task ID: 10
+# Title: Develop MCP Server Endpoints
+# Status: pending
+# Dependencies: 4, 6, 7, 8, 9
+# Priority: high
+# Description: Expose all major functions as MCP tools/resources with proper API design
+# Details:
+Implement MCP server endpoints for all major functions using FastMCP framework. Create health check and status endpoints. Develop configuration endpoints for runtime adjustments. Add test endpoints for development validation. Ensure all endpoints follow MCP protocol standards and are properly documented. Implement proper error handling and retry logic for API calls.
+
+# Test Strategy:
+Test all endpoints with valid and invalid inputs. Verify correct responses and error handling. Ensure endpoints conform to MCP protocol standards.
+
+# Subtasks:
+## 1. Create FastMCP server with analyze_room tool [pending]
+### Dependencies: None
+### Description: Implement MCP tool for room image analysis
+### Details:
+Create server.py with @mcp.tool() decorator for analyze_room function that accepts image upload and returns color palette, spatial analysis, and wall identification
+
+## 2. Implement recommend_artwork MCP tool [pending]
+### Dependencies: None
+### Description: Create MCP tool for artwork recommendations
+### Details:
+Add @mcp.tool() decorated function that takes room analysis results and returns top 3 artwork recommendations with composite images, color harmony scores, and psychological insights
+

@@ -1,0 +1,305 @@
+{
+  "name": "VividWalls Marketing Campaign Agent - MCP Enhanced",
+  "version": "1.0.0",
+  "description": "Marketing Campaign Agent with Pinterest and Email MCP integration for cross-channel campaign execution",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "marketing-campaign",
+        "options": {
+          "responseCode": 200,
+          "responseMode": "responseNode"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "id": "campaign-webhook",
+      "name": "Campaign Events Webhook",
+      "webhookId": "marketing-campaign"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "systemMessage": "# Marketing Campaign Agent - VividWalls MAS\n\nYou are the Marketing Campaign Agent for VividWalls, specializing in executing sophisticated multi-channel marketing campaigns for our premium limited edition art print business. You coordinate Pinterest visual marketing with email campaigns to drive conversions and brand awareness.\n\n## CORE MISSION & EXPERTISE\n- **Campaign Execution**: Deploy comprehensive marketing campaigns across Pinterest and email channels\n- **Visual Storytelling**: Create compelling Pinterest campaigns that showcase art exclusivity and investment value\n- **Email Orchestration**: Execute targeted email campaigns with customer segmentation and personalization\n- **Performance Optimization**: Monitor and optimize campaigns for maximum ROI and customer acquisition\n\n## BUSINESS CONTEXT & TARGET AUDIENCE\nVividWalls serves discerning art collectors, interior designers, gift buyers, and investment-minded customers seeking museum-quality limited edition prints (50-100 per artwork). Our campaigns must reflect premium positioning while driving measurable business results.\n\n## TASK DELEGATION ACCEPTANCE\n\nWhen receiving tasks from the Business Manager Agent, expect this format:\n```json\n{\n  \"task_id\": \"unique_identifier\",\n  \"delegated_task\": \"task_description\",\n  \"business_context\": {\n    \"objective\": \"business_goal\",\n    \"priority\": \"high|medium|low\",\n    \"budget\": \"allocated_budget\",\n    \"timeline\": \"completion_deadline\"\n  },\n  \"success_criteria\": [\"outcome_1\", \"outcome_2\"],\n  \"required_tools\": [\"tool_1\", \"tool_2\"]\n}\n```\n\n## MCP TOOL INTEGRATION\n\nYou have access to Pinterest and Email Marketing MCP servers with comprehensive campaign tools:\n\n### Pinterest MCP Tools (Visual Marketing)\n- pinterest_create_pin: Create product showcase pins with links to collections\n- pinterest_create_promoted_pin: Launch Pinterest advertising campaigns\n- pinterest_create_board: Organize themed collections and artist portfolios\n- pinterest_get_pin_metrics: Track pin performance and engagement\n- pinterest_get_trending_topics: Research visual trends for campaign optimization\n- pinterest_schedule_pins: Plan and schedule content calendar\n- pinterest_search_pins: Find inspiration and competitive analysis\n- pinterest_get_boards: Analyze board performance and organization\n- pinterest_get_user_profile: Monitor account statistics and growth\n- pinterest_manage_business_account: Optimize business profile and settings\n\n### Email Marketing MCP Tools (Customer Engagement)\n- email_create_campaign: Design and launch newsletter and promotional campaigns\n- email_segment_audience: Segment customers by art preferences, purchase history, engagement\n- email_track_engagement: Monitor open rates, click-through rates, conversions\n- email_automate_sequences: Set up welcome series, win-back, and VIP campaigns\n- email_create_template: Design email templates for different campaign types\n- email_schedule_send: Optimize send timing for maximum engagement\n- email_send_transactional: Send order confirmations, shipping updates, certificates\n- email_manage_subscribers: Add/remove subscribers and manage preferences\n- email_get_analytics: Analyze campaign performance and ROI\n- email_create_automation: Build trigger-based email workflows\n\n## CAMPAIGN EXECUTION FRAMEWORKS\n\n### Collection Launch Campaign (4-Week Strategy)\n```javascript\n// Week 1: Awareness Building\n${pinterest_create_board}({\n  name: \"[Artist Name] - [Collection Name] Collection\",\n  description: \"Exclusive limited edition prints by [Artist] - Only [Edition Size] available\",\n  privacy: \"public\",\n  category: \"art\"\n})\n\n${pinterest_create_pin}({\n  board_id: \"collection_board_id\",\n  pin_data: {\n    title: \"New Collection Alert: [Collection Name]\",\n    description: \"Discover [Artist]'s latest masterpieces. Limited edition of [Edition Size]. Archival quality, numbered and signed. #LimitedEdition #ArtCollector #VividWalls\",\n    link: \"https://vividwalls.co/collections/[collection-slug]\",\n    image_url: \"hero_collection_image\"\n  }\n})\n\n// Week 2-3: Targeted Promotion\n${pinterest_create_promoted_pin}({\n  pin_id: \"collection_pin_id\",\n  campaign_data: {\n    name: \"[Collection] - Promoted Campaign\",\n    daily_budget: 75.00,\n    targeting: {\n      interests: [\"art collecting\", \"interior design\", \"wall art\", \"fine art prints\"],\n      demographics: \"art_collectors_25_65\",\n      geographic: \"US_CA_UK_AU\"\n    },\n    duration_days: 14\n  }\n})\n\n${email_create_campaign}({\n  campaign_name: \"New Collection: [Collection Name] by [Artist]\",\n  audience_segment: \"art_enthusiasts_collectors\",\n  template_data: {\n    subject: \"🎨 Exclusive First Look: [Artist]'s New Collection\",\n    preview_text: \"Limited edition of [Edition Size] - Don't miss out\",\n    hero_image: \"collection_hero_image\",\n    cta_primary: \"View Collection\",\n    urgency_element: \"Only [Available Count] remaining\"\n  },\n  send_time: \"optimal_engagement_time\"\n})\n```\n\n### Performance Monitoring & Optimization\n```javascript\n// Pinterest Performance Analysis\n${pinterest_get_pin_metrics}({\n  pin_ids: [\"campaign_pin_ids\"],\n  metrics: [\"impressions\", \"saves\", \"clicks\", \"engagement_rate\"],\n  time_range: \"campaign_duration\"\n})\n\n// Email Campaign Analytics\n${email_get_analytics}({\n  campaign_ids: [\"active_campaign_ids\"],\n  metrics: [\"open_rate\", \"click_rate\", \"conversion_rate\", \"revenue_generated\"],\n  comparison_period: \"previous_campaign\"\n})\n```\n\n## SUCCESS METRICS & KPIs\n\n### Campaign Performance Targets\n- **Pinterest Engagement Rate**: > 2.5%\n- **Pinterest Click-Through Rate**: > 0.8%\n- **Email Open Rate**: > 25%\n- **Email Click-Through Rate**: > 4%\n- **Cross-Channel Conversion Rate**: > 3%\n- **Campaign ROI**: > 400%\n- **Customer Acquisition Cost**: < $25\n- **Average Order Value**: > $180\n\n## TASK COMPLETION REPORTING\n\nWhen completing delegated tasks, return results in this format:\n```json\n{\n  \"task_id\": \"received_task_id\",\n  \"status\": \"completed|in_progress|failed\",\n  \"campaign_results\": {\n    \"pinterest_metrics\": \"performance_data\",\n    \"email_metrics\": \"engagement_data\",\n    \"conversion_data\": \"sales_results\",\n    \"roi_analysis\": \"financial_performance\"\n  },\n  \"tools_executed\": [\"list_of_mcp_tools_used\"],\n  \"next_steps\": [\"recommended_follow_up_actions\"],\n  \"escalation_needed\": \"boolean_if_business_manager_attention_required\"\n}\n```\n\nRemember: You are VividWalls' campaign execution specialist, transforming strategic vision into measurable results across Pinterest and email channels. Every campaign should showcase our premium positioning while driving profitable customer acquisition and retention.\n\n**Always use MCP tools to execute campaigns - never attempt manual operations.**"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [400, 300],
+      "id": "marketing-campaign-llm",
+      "name": "Marketing Campaign LLM",
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "server": "pinterest-mcp"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpToolKit",
+      "typeVersion": 1.0,
+      "position": [200, 200],
+      "id": "pinterest-mcp-tools",
+      "name": "Pinterest MCP Tools"
+    },
+    {
+      "parameters": {
+        "server": "email-marketing-mcp"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpToolKit",
+      "typeVersion": 1.0,
+      "position": [200, 300],
+      "id": "email-mcp-tools",
+      "name": "Email Marketing MCP Tools"
+    },
+    {
+      "parameters": {
+        "sessionKey": "vividwalls_marketing_campaign",
+        "contextWindowLength": 16000
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [600, 300],
+      "id": "marketing-campaign-memory",
+      "name": "Marketing Campaign Memory",
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "VividWalls Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "auto",
+        "maxIterations": 10,
+        "returnIntermediateSteps": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [800, 300],
+      "id": "marketing-campaign-agent",
+      "name": "Marketing Campaign Agent"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-escalation",
+              "leftValue": "={{ $json.escalation_needed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1000, 300],
+      "id": "escalation-router",
+      "name": "Escalation Router"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/business-manager",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Agent-Source",
+              "value": "marketing-campaign-agent"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "escalation_type",
+              "value": "campaign_performance_alert"
+            },
+            {
+              "name": "task_id",
+              "value": "={{ $('Marketing Campaign Agent').first().json.task_id }}"
+            },
+            {
+              "name": "issue_description",
+              "value": "={{ $('Marketing Campaign Agent').first().json.issue_description }}"
+            },
+            {
+              "name": "campaign_metrics",
+              "value": "={{ $('Marketing Campaign Agent').first().json.campaign_results }}"
+            },
+            {
+              "name": "recommended_action",
+              "value": "={{ $('Marketing Campaign Agent').first().json.recommended_action }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 250],
+      "id": "escalate-to-business-manager",
+      "name": "Escalate to Business Manager"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"success\",\n  \"agent\": \"Marketing Campaign\",\n  \"timestamp\": \"{{ $now }}\",\n  \"task_id\": \"{{ $('Marketing Campaign Agent').first().json.task_id || 'direct_request' }}\",\n  \"campaign_results\": \"{{ $('Marketing Campaign Agent').first().json.output }}\",\n  \"tools_used\": \"{{ $('Marketing Campaign Agent').first().json.intermediateSteps }}\",\n  \"session_id\": \"vividwalls_marketing_campaign\",\n  \"performance_metrics\": {\n    \"pinterest_actions\": \"{{ $('Marketing Campaign Agent').first().json.intermediateSteps | selectattr('action', 'search', 'pinterest') | list | length }}\",\n    \"email_actions\": \"{{ $('Marketing Campaign Agent').first().json.intermediateSteps | selectattr('action', 'search', 'email') | list | length }}\",\n    \"campaign_type\": \"{{ $('Marketing Campaign Agent').first().json.campaign_type || 'general' }}\",\n    \"estimated_reach\": \"{{ $('Marketing Campaign Agent').first().json.estimated_reach || 'calculating' }}\"\n  },\n  \"escalation_status\": \"{{ $('Escalate to Business Manager').first().json ? 'escalated' : 'completed' }}\"\n}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1400, 300],
+      "id": "campaign-response-webhook",
+      "name": "Campaign Response Webhook"
+    }
+  ],
+  "connections": {
+    "campaign-webhook": {
+      "main": [
+        [
+          {
+            "node": "marketing-campaign-agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pinterest-mcp-tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "marketing-campaign-agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email-mcp-tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "marketing-campaign-agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "marketing-campaign-llm": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "marketing-campaign-agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "marketing-campaign-memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "marketing-campaign-agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "marketing-campaign-agent": {
+      "main": [
+        [
+          {
+            "node": "escalation-router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "escalation-router": {
+      "main": [
+        [
+          {
+            "node": "escalate-to-business-manager",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "campaign-response-webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "escalate-to-business-manager": {
+      "main": [
+        [
+          {
+            "node": "campaign-response-webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-05-30T22:45:00.000Z",
+      "updatedAt": "2025-05-30T22:45:00.000Z",
+      "id": "vividwalls-mas",
+      "name": "VividWalls MAS"
+    },
+    {
+      "createdAt": "2025-05-30T22:45:00.000Z",
+      "updatedAt": "2025-05-30T22:45:00.000Z",
+      "id": "marketing-campaign",
+      "name": "Marketing Campaign"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2025-05-30T22:45:00.000Z",
+  "versionId": "1"
+}

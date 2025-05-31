@@ -1,0 +1,319 @@
+{
+  "name": "VividWalls CopilotKit Integration Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vividwalls-copilot",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "WordPress CopilotKit Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "vividwalls-copilot-webhook",
+      "options": {
+        "allowedOrigins": "https://vividwalls.blog,https://wordpress.vividwalls.blog"
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and validate incoming data from WordPress CopilotKit\nconst body = $input.first().json.body;\n\n// Parse the incoming request\nconst chatInput = body.chatInput || '';\nconst sessionId = body.sessionId || 'default';\nconst imageData = body.imageData || null;\nconst source = body.source || 'unknown';\nconst pageUrl = body.page_url || '';\nconst userAgent = body.user_agent || '';\n\n// Determine the type of request\nlet requestType = 'text';\nif (imageData) {\n  requestType = 'image_analysis';\n} else if (chatInput.toLowerCase().includes('recommend') || chatInput.toLowerCase().includes('suggest')) {\n  requestType = 'recommendation';\n} else if (chatInput.toLowerCase().includes('question') || chatInput.toLowerCase().includes('help')) {\n  requestType = 'qa';\n}\n\n// Extract room/space keywords for better recommendations\nconst spaceKeywords = {\n  room_type: extractRoomType(chatInput),\n  style: extractStyle(chatInput),\n  colors: extractColors(chatInput),\n  size: extractSize(chatInput)\n};\n\nfunction extractRoomType(text) {\n  const roomTypes = ['living room', 'bedroom', 'kitchen', 'bathroom', 'office', 'dining room', 'hallway', 'entryway'];\n  return roomTypes.find(type => text.toLowerCase().includes(type)) || 'general';\n}\n\nfunction extractStyle(text) {\n  const styles = ['modern', 'contemporary', 'traditional', 'minimalist', 'rustic', 'industrial', 'bohemian', 'scandinavian'];\n  return styles.find(style => text.toLowerCase().includes(style)) || 'contemporary';\n}\n\nfunction extractColors(text) {\n  const colors = ['blue', 'red', 'green', 'yellow', 'purple', 'orange', 'pink', 'black', 'white', 'gray', 'brown'];\n  return colors.filter(color => text.toLowerCase().includes(color));\n}\n\nfunction extractSize(text) {\n  if (text.toLowerCase().includes('large') || text.toLowerCase().includes('big')) return 'large';\n  if (text.toLowerCase().includes('small') || text.toLowerCase().includes('tiny')) return 'small';\n  return 'medium';\n}\n\nreturn {\n  chatInput,\n  sessionId,\n  imageData,\n  source,\n  pageUrl,\n  userAgent,\n  requestType,\n  spaceKeywords,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "parse-request",
+      "name": "Parse CopilotKit Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "image_analysis",
+              "leftValue": "={{ $json.requestType }}",
+              "rightValue": "image_analysis",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "recommendation",
+              "leftValue": "={{ $json.requestType }}",
+              "rightValue": "recommendation",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "qa",
+              "leftValue": "={{ $json.requestType }}",
+              "rightValue": "qa",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "fallbackOutput": "extra"
+      },
+      "id": "route-request",
+      "name": "Route Request Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {
+          "systemMessage": "You are VividWalls AI assistant. Analyze the uploaded room image and provide detailed recommendations for wall art that would complement the space. Consider:\n\n1. Room style and aesthetic\n2. Color palette and lighting\n3. Wall space and proportions\n4. Existing furniture and decor\n5. Mood and atmosphere\n\nProvide specific artwork recommendations from the VividWalls catalog with reasoning for each suggestion."
+        },
+        "prompt": "=Analyze this room image and recommend suitable VividWalls artwork. Image data: {{ $json.imageData }}\n\nUser request: {{ $json.chatInput }}\n\nRoom context: {{ JSON.stringify($json.spaceKeywords) }}",
+        "model": "gpt-4-vision-preview"
+      },
+      "id": "image-analysis",
+      "name": "AI Image Analysis",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {
+          "systemMessage": "You are VividWalls AI assistant specializing in art recommendations. Based on the user's space description, recommend 3-5 specific artworks from the VividWalls catalog that would work perfectly in their space. Consider room type, style preferences, color schemes, and size requirements."
+        },
+        "prompt": "=User request: {{ $json.chatInput }}\n\nSpace details: {{ JSON.stringify($json.spaceKeywords) }}\n\nProvide specific VividWalls artwork recommendations with:\n1. Artwork title and description\n2. Why it fits the space\n3. Size recommendations\n4. Styling tips",
+        "model": "gpt-4"
+      },
+      "id": "recommendation-engine",
+      "name": "Art Recommendation Engine",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {
+          "systemMessage": "You are VividWalls customer service AI. Answer questions about VividWalls products, services, customization options, shipping, returns, and general art advice. Be helpful, friendly, and knowledgeable."
+        },
+        "prompt": "=Customer question: {{ $json.chatInput }}\n\nContext: {{ JSON.stringify($json.spaceKeywords) }}\n\nProvide a helpful and informative response.",
+        "model": "gpt-3.5-turbo"
+      },
+      "id": "qa-assistant",
+      "name": "Q&A Assistant",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "read",
+        "filePath": "/data/shared/knowledge/vividwalls-q&a.csv",
+        "options": {
+          "delimiter": ",",
+          "enableBOM": false,
+          "encoding": "utf8"
+        }
+      },
+      "id": "load-knowledge-base",
+      "name": "Load VividWalls Knowledge Base",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [680, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process AI response and format for CopilotKit\nconst aiResponse = $input.first().json.choices?.[0]?.message?.content || $input.first().json.text || 'Sorry, I could not process your request.';\nconst originalData = $('parse-request').first().json;\nconst knowledgeBase = $('load-knowledge-base').all();\n\n// Extract artwork recommendations from AI response\nfunction extractRecommendations(response) {\n  const recommendations = [];\n  \n  // Parse AI response for artwork mentions\n  // This would be enhanced with actual VividWalls catalog integration\n  const artworkPattern = /(?:artwork|print|piece)\\s*[\"']([^\"']+)[\"']/gi;\n  let match;\n  \n  while ((match = artworkPattern.exec(response)) !== null) {\n    recommendations.push({\n      title: match[1],\n      description: `Beautiful ${match[1]} perfect for your space`,\n      image: `https://vividwalls.com/images/${match[1].toLowerCase().replace(/\\s+/g, '-')}.jpg`,\n      url: `https://vividwalls.com/artwork/${match[1].toLowerCase().replace(/\\s+/g, '-')}`,\n      price: '$49.99',\n      sizes: ['12x16', '16x20', '20x24', '24x36']\n    });\n  }\n  \n  // If no specific artworks found, provide sample recommendations\n  if (recommendations.length === 0) {\n    const sampleArtworks = [\n      {\n        title: 'Abstract Serenity',\n        description: 'Calming abstract piece with soft blues and whites',\n        image: 'https://vividwalls.com/images/abstract-serenity.jpg',\n        url: 'https://vividwalls.com/artwork/abstract-serenity',\n        price: '$49.99',\n        sizes: ['12x16', '16x20', '20x24', '24x36']\n      },\n      {\n        title: 'Modern Geometric',\n        description: 'Contemporary geometric design in neutral tones',\n        image: 'https://vividwalls.com/images/modern-geometric.jpg',\n        url: 'https://vividwalls.com/artwork/modern-geometric',\n        price: '$54.99',\n        sizes: ['12x16', '16x20', '20x24', '24x36']\n      },\n      {\n        title: 'Nature\\'s Harmony',\n        description: 'Botanical print bringing nature indoors',\n        image: 'https://vividwalls.com/images/natures-harmony.jpg',\n        url: 'https://vividwalls.com/artwork/natures-harmony',\n        price: '$44.99',\n        sizes: ['12x16', '16x20', '20x24', '24x36']\n      }\n    ];\n    \n    // Select recommendations based on space keywords\n    const roomType = originalData.spaceKeywords.room_type;\n    const style = originalData.spaceKeywords.style;\n    \n    recommendations.push(...sampleArtworks.slice(0, 3));\n  }\n  \n  return recommendations.slice(0, 5); // Limit to 5 recommendations\n}\n\n// Generate visualization suggestions for image analysis\nfunction generateVisualizations(response, imageData) {\n  if (!imageData) return null;\n  \n  return {\n    room_analysis: {\n      dominant_colors: ['#f5f5f5', '#8b7355', '#2c3e50'],\n      style_detected: 'Modern Contemporary',\n      lighting: 'Natural light from large windows',\n      wall_space: 'Large blank wall above sofa'\n    },\n    placement_suggestions: [\n      {\n        location: 'Above sofa',\n        recommended_size: '24x36 or 30x40',\n        height: '6-8 inches above furniture',\n        arrangement: 'Single large piece or gallery wall'\n      }\n    ]\n  };\n}\n\nconst recommendations = extractRecommendations(aiResponse);\nconst visualizations = originalData.requestType === 'image_analysis' ? generateVisualizations(aiResponse, originalData.imageData) : null;\n\n// Format response for CopilotKit\nreturn {\n  response: aiResponse,\n  recommendations: recommendations,\n  visualizations: visualizations,\n  session_id: originalData.sessionId,\n  request_type: originalData.requestType,\n  timestamp: new Date().toISOString(),\n  metadata: {\n    source: originalData.source,\n    page_url: originalData.pageUrl,\n    space_keywords: originalData.spaceKeywords\n  }\n};"
+      },
+      "id": "format-response",
+      "name": "Format CopilotKit Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "webhook-response",
+      "name": "Send Response to WordPress",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "resource": "log",
+        "additionalFields": {
+          "level": "info",
+          "message": "=VividWalls CopilotKit request processed: {{ $json.request_type }} for session {{ $json.session_id }}",
+          "metadata": "={{ JSON.stringify($json.metadata) }}"
+        }
+      },
+      "id": "log-interaction",
+      "name": "Log User Interaction",
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [1340, 500]
+    }
+  ],
+  "connections": {
+    "WordPress CopilotKit Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse CopilotKit Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse CopilotKit Request": {
+      "main": [
+        [
+          {
+            "node": "Route Request Type",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Load VividWalls Knowledge Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Request Type": {
+      "main": [
+        [
+          {
+            "node": "AI Image Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Art Recommendation Engine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Q&A Assistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Image Analysis": {
+      "main": [
+        [
+          {
+            "node": "Format CopilotKit Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Art Recommendation Engine": {
+      "main": [
+        [
+          {
+            "node": "Format CopilotKit Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Q&A Assistant": {
+      "main": [
+        [
+          {
+            "node": "Format CopilotKit Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format CopilotKit Response": {
+      "main": [
+        [
+          {
+            "node": "Send Response to WordPress",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log User Interaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-01-15T10:00:00.000Z",
+      "id": "vividwalls",
+      "name": "VividWalls"
+    },
+    {
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-01-15T10:00:00.000Z",
+      "id": "copilotkit",
+      "name": "CopilotKit"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-15T10:00:00.000Z",
+  "versionId": "1"
+} 

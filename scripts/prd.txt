@@ -1,0 +1,106 @@
+# VividWalls Color Palette Agent MCP Server - Product Requirements Document
+
+## 1. OVERVIEW
+The VividWalls Color Palette Agent is an MCP (Model Context Protocol) server that analyzes customer-uploaded room images and recommends artwork based on color composition and psychological analysis. The system uses OpenAI GPT-4o Vision API for image analysis and OpenAI Image Generation API to create realistic mockups of artwork in customer spaces.
+
+## 2. CORE FUNCTIONALITY
+
+### 2.1 Image Processing Pipeline
+- Accept customer-uploaded room/space images
+- Use OpenAI GPT-4o Vision API for object detection and spatial analysis
+- Identify and remove humans and animals from analysis
+- Map furniture placement and relationships
+- Identify all wall surfaces and determine optimal wall for artwork placement
+- Extract comprehensive color palette from the space
+- Generate hex color codes for each identified item
+- Output results as HTML/CSS grid format
+
+### 2.2 Color Theory Knowledge Base
+- Convert color-theroy.md content into a vector database using PostgreSQL with pgvector extension
+- Store color theory principles, relationships, and psychological effects
+- Enable semantic search for color-related queries
+- Expose knowledge base as MCP resource/tool for LLM access
+
+### 2.3 Artwork Analysis System
+- Batch process VividWalls artwork catalog using OpenAI Vision API
+- Extract color composition from each artwork
+- Analyze mood and tone attributes
+- Determine psychological impact of colors used
+- Map emotional response indicators
+- Create comprehensive data table linking:
+  - Color combinations to psychological effects
+  - Color attributes to human emotional responses
+  - Mood/tone classifications for recommendation engine
+
+### 2.4 Recommendation Engine
+- Match customer room color palette with artwork attributes
+- Consider psychological compatibility between space and artwork
+- Apply color harmony principles (complementary, analogous, triadic, etc.)
+- Rank recommendations based on:
+  - Color harmony score
+  - Psychological/emotional fit
+  - Visual balance considerations
+
+### 2.5 Image Generation & Output
+- Use OpenAI Image Generation API (gpt-4o, gpt-image-1) to create composite images
+- Ensure exact replication of both VividWalls artwork and customer room
+- Position artwork naturally on identified wall (hanging or leaning)
+- Generate final deliverables:
+  - High-fidelity composite image showing artwork in space
+  - Color palette visualization with hex codes
+  - Detailed list of room items with associated colors
+  - Psychological analysis of color relationships
+
+## 3. TECHNICAL REQUIREMENTS
+
+### 3.1 Framework & Infrastructure
+- Build using FastMCP (Python-based MCP framework)
+- Use PostgreSQL with pgvector extension for vector database
+- Implement modular architecture with clear separation of concerns
+- Include comprehensive logging using Python logging module
+- Support both local development and production deployment
+
+### 3.2 External Integrations
+- OpenAI GPT-4o Vision API for image analysis
+- OpenAI Image Generation API for composite creation
+- PostgreSQL with pgvector for vector storage and search
+- VividWalls product catalog (products_export.csv)
+
+### 3.3 Configuration & Development
+- Provide .env.example for local development setup
+- Include Docker Compose configuration for PostgreSQL + pgvector
+- Follow vector-database-connection.mdc rules for DB connections
+- Implement proper error handling and retry logic for API calls
+
+### 3.4 MCP Server Endpoints
+- Expose all major functions as MCP tools/resources
+- Include health check and status endpoints
+- Provide configuration endpoints for runtime adjustments
+- Add test endpoints for development validation
+
+## 4. DATA REQUIREMENTS
+- VividWalls product catalog with artwork images and metadata
+- Color theory knowledge base (color-theroy.md)
+- Color-psychology mapping data
+- Test room images for development
+
+## 5. PERFORMANCE REQUIREMENTS
+- Process room images within 30 seconds
+- Support concurrent requests for multiple users
+- Cache artwork analysis results to avoid redundant processing
+- Optimize vector search for sub-second response times
+
+## 6. SECURITY REQUIREMENTS
+- Secure storage of API keys and credentials
+- Input validation for uploaded images
+- Rate limiting for API endpoints
+- Proper error handling to avoid information leakage
+
+## 7. DELIVERABLES
+- FastMCP server with all specified functionality
+- Comprehensive documentation and setup instructions
+- Test suite for core functionality
+- Sample images and test data for development
+- Deployment guide for production environment
+
+This PRD serves as the comprehensive blueprint for developing the VividWalls Color Palette Agent MCP Server, ensuring all stakeholders understand the requirements, scope, and success criteria for this transformative project. 

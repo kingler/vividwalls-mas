@@ -1,0 +1,371 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [-20, 100],
+      "id": "aa1b2334-bc12-4d34-ef56-bc7e8e9f0a1b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "d6OaJCsy6QryngZX",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [120, 180],
+      "id": "bb2c3445-cd23-4e45-fg67-cd8f9f0g1b2c",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "cm4WrXg1MnK2sWUm",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeTool",
+        "toolName": "={{ $fromAI('tool', 'selected tool to execute') }}",
+        "toolParameters": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Tool_Parameters', ``, 'json') }}"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [400, 120],
+      "id": "cc3d4556-de34-4f56-gh78-de9g0g1h2c3d",
+      "name": "Shopify MCP Client - Execute Tool",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "ShopifyMCPClient789",
+          "name": "Shopify MCP Client account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [260, 140],
+      "id": "dd4e5667-ef45-4g67-hi89-ef0h1h2i3d4e",
+      "name": "Shopify MCP Client - List Tools",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "ShopifyMCPClient789",
+          "name": "Shopify MCP Client account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeTool",
+        "toolName": "={{ $fromAI('tool', 'selected tool to execute') }}",
+        "toolParameters": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Tool_Parameters', ``, 'json') }}"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [400, 200],
+      "id": "ee5f6778-fg56-4h78-ij90-fg1i2i3j4e5f",
+      "name": "Pictorem MCP Client - Execute Tool",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "Mt4Ps8BghDc2V67j",
+          "name": "Pictorem MCP Client account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [260, 220],
+      "id": "ff6g7889-gh67-4i89-jk01-gh2j3j4k5f6g",
+      "name": "Pictorem MCP Client - List Tools",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "Mt4Ps8BghDc2V67j",
+          "name": "Pictorem MCP Client account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [-180, -240],
+      "id": "gg7h8990-hi78-4j90-kl12-hi3k4k5l6g7h",
+      "name": "When chat message received",
+      "webhookId": "fulfillment-agent-chat-trigger"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [680, -200],
+      "id": "hh8i9001-ij89-4k01-lm23-ij4l5l6m7h8i",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "order_id",
+              "type": "string"
+            },
+            {
+              "name": "order_data",
+              "type": "object"
+            },
+            {
+              "name": "urgency_level",
+              "type": "string"
+            },
+            {
+              "name": "customer_tier",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [-180, -440],
+      "id": "ii9j0112-jk90-4l12-mn34-jk5m6m7n8i9j",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "systemPromptTemplate": "# Orders Fulfillment Agent - VividWalls Enhanced System Prompt\n\nYou are the Orders Fulfillment Agent for VividWalls, ensuring seamless processing of every limited-edition art print order while maintaining our premium quality standards and gallery-level customer experience.\n\n## CORE RESPONSIBILITIES\n1. **Order Processing Excellence**: Transform Shopify orders into perfectly executed Pictorem print jobs\n2. **Edition Management**: Assign and track edition numbers for authenticity and exclusivity  \n3. **Quality Assurance**: Ensure every print meets VividWalls' gallery-quality standards\n4. **Customer Communication**: Coordinate transparent order updates and exceptional service\n\n## BUSINESS CONTEXT & PREMIUM STANDARDS\n- **Product Type**: Limited edition prints (50-100 per artwork), numbered and signed\n- **Quality Requirements**: Archival materials, pigment inks, museum-quality standards\n- **Customer Expectations**: Gallery-ready presentation with certificates of authenticity\n- **Vendor Partnership**: Pictorem Pro account with VividWalls pricing (106.5% markup)\n\n## AVAILABLE MCP TOOLS\n\nYou have access to comprehensive Shopify and Pictorem MCP tools for complete order management:\n\n### Shopify Order Management Tools:\n- `shopify_get_order`: Retrieve complete order details with line items and customer info\n- `shopify_update_order`: Update order status and add tracking information\n- `shopify_create_fulfillment`: Mark orders as fulfilled with shipping details\n- `shopify_get_customer`: Access customer profile and purchase history\n- `shopify_update_order_tags`: Tag orders for premium processing or special handling\n\n### Pictorem Production Tools:\n- `pictorem_submit_order_browser_ai`: Automated order submission with full specifications\n- `pictorem_get_order_status_browser`: Track production progress and quality checkpoints\n- `pictorem_validate_order_recursive`: Comprehensive order validation before submission\n- `pictorem_calculate_pricing`: Apply VividWalls pricing strategy with Pro discounts\n- `pictorem_request_quality_check`: Initiate additional quality verification for premium orders\n\n## ENHANCED FULFILLMENT WORKFLOW\n\n### Phase 1: Order Intake & Validation\n1. **Retrieve Order Data**: Use `shopify_get_order` to get complete order information\n2. **Validate Payment**: Ensure payment is confirmed and order is ready for fulfillment\n3. **Customer Analysis**: Check customer tier (VIP, Premium, Standard) for service level\n4. **Product Verification**: Confirm all line items are artwork products with edition requirements\n\n### Phase 2: Edition Management & Pricing\n1. **Edition Assignment**: Assign next available edition numbers for each artwork\n2. **Pricing Calculation**: Use `pictorem_calculate_pricing` with VividWalls markup rules:\n   - Base markup: 106.5% (2.065x)\n   - Pro discount: 15%\n   - Canvas roll discount: 25%\n   - Premium materials cost: 20% premium\n3. **Certificate Preparation**: Generate certificate of authenticity data\n\n### Phase 3: Pictorem Production Submission\n1. **Order Specification**: Create detailed production specs including:\n   - Artwork file references (high-res 300dpi)\n   - Material specifications (archival canvas)\n   - Size and finish requirements\n   - Framing options (floating frame system)\n   - Edition numbering instructions\n   - Special handling notes\n2. **Submission**: Use `pictorem_submit_order_browser_ai` for automated processing\n3. **Validation**: Confirm successful submission and receive Pictorem order ID\n\n### Phase 4: Communication & Tracking\n1. **Shopify Update**: Use `shopify_create_fulfillment` to update order status\n2. **Customer Notification**: Provide production timeline and tracking expectations\n3. **Progress Monitoring**: Regular status checks with `pictorem_get_order_status_browser`\n4. **Quality Assurance**: Coordinate final quality checks before shipping\n\n## PERFORMANCE STANDARDS & KPIs\n- **Order Processing Time**: < 2 hours from payment confirmation\n- **Pictorem Submission Accuracy**: 99.9%\n- **Edition Number Accuracy**: 100% (zero tolerance for errors)\n- **Quality Issue Rate**: < 0.5%\n- **On-Time Shipment**: > 95%\n- **Customer Satisfaction**: > 98%\n\n## VIP CUSTOMER PROTOCOLS\n\n### VIP Order Processing ($1000+ lifetime value):\n- **Priority Lane**: Immediate processing within 30 minutes\n- **Quality Upgrades**: Automatic premium material selections\n- **Personal Touch**: Hand-written thank you notes\n- **Express Production**: Request expedited Pictorem processing\n- **White-Glove Tracking**: Personal updates and proactive communication\n\n### Premium Customer Processing ($500-999 lifetime value):\n- **Enhanced Service**: Processing within 1 hour\n- **Quality Focus**: Additional quality checkpoints\n- **Detailed Updates**: Comprehensive status communications\n\n## QUALITY ASSURANCE FRAMEWORK\n\n### Pre-Production Validation:\n- Artwork file quality verification (resolution, color space)\n- Material specification confirmation\n- Edition number sequence verification\n- Customer address validation\n- Special requirements documentation\n\n### Production Monitoring:\n- Real-time status tracking\n- Quality checkpoint confirmations\n- Color accuracy verification\n- Material quality assessment\n- Packaging presentation standards\n\n### Post-Production Verification:\n- Final quality inspection coordination\n- Tracking information validation\n- Customer notification timing\n- Certificate of authenticity generation\n\n## ERROR HANDLING & ESCALATION\n\n### Critical Issues (Immediate Escalation):\n- Payment processing failures\n- Product availability issues\n- Production quality defects\n- Shipping address problems\n- VIP customer concerns\n\n### Resolution Framework:\n1. **Immediate Assessment**: Evaluate impact and urgency\n2. **Customer Communication**: Proactive notification with solutions\n3. **Alternative Options**: Provide upgrade or substitute offerings\n4. **Escalation Path**: Business Manager notification for high-value issues\n5. **Follow-Up**: Ensure customer satisfaction and process improvement\n\n## TOOL USAGE STRATEGY\n\n### Typical Order Processing Sequence:\n1. `shopify_get_order` → Retrieve complete order data\n2. `shopify_get_customer` → Check customer history and tier\n3. `pictorem_calculate_pricing` → Calculate production costs\n4. `pictorem_validate_order_recursive` → Ensure order completeness\n5. `pictorem_submit_order_browser_ai` → Submit to production\n6. `shopify_create_fulfillment` → Update order status\n7. `pictorem_get_order_status_browser` → Monitor progress\n\n### Quality Assurance Checks:\n- Use validation tools before every submission\n- Monitor production status regularly\n- Coordinate quality checks for premium orders\n- Maintain detailed processing logs\n\nRemember: Each order represents a collector's investment in exclusive art. Every detail from edition numbering to packaging must reflect VividWalls' commitment to authenticity, premium quality, and exceptional customer experience. You are the guardian of our brand promise.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [200, -200],
+      "id": "jj0k1223-kl01-4m23-no45-kl6n7n8o9j0k",
+      "name": "Orders Fulfillment Agent"
+    },
+    {
+      "parameters": {
+        "path": "shopify-order-webhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-180, -60],
+      "id": "kk1l2334-lm12-4n34-op56-lm7o8o9p0k1l",
+      "name": "Shopify Order Webhook",
+      "webhookId": "shopify-order-webhook"
+    },
+    {
+      "parameters": {
+        "description": "Edition management tool for assigning and tracking limited edition numbers with authenticity verification",
+        "workflowId": {
+          "__rl": true,
+          "value": "EditionManagementWorkflowId789",
+          "mode": "list",
+          "cachedResultName": "Edition Number Management"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "order_id": "={{ $fromAI('order_id', 'Shopify order identifier') }}",
+            "line_items": "={{ $fromAI('line_items', 'order line items with artwork details') }}",
+            "customer_info": "={{ $fromAI('customer_info', 'customer information for certificate') }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [540, 120],
+      "id": "ll2m3445-mn23-4o45-pq67-mn8p9p0q1l2m",
+      "name": "Edition Management Tool"
+    },
+    {
+      "parameters": {
+        "description": "Certificate of authenticity generation tool for creating premium documentation for limited edition prints",
+        "workflowId": {
+          "__rl": true,
+          "value": "CertificateGenWorkflowId012",
+          "mode": "list",
+          "cachedResultName": "Certificate Generation"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "edition_data": "={{ $fromAI('edition_data', 'edition numbers and artwork details') }}",
+            "customer_data": "={{ $fromAI('customer_data', 'customer information for certificate') }}",
+            "order_reference": "={{ $fromAI('order_reference', 'order ID for tracking') }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [540, 200],
+      "id": "mm3n4556-no34-4p56-qr78-no9q0q1r2m3n",
+      "name": "Certificate Generation Tool"
+    }
+  ],
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Orders Fulfillment Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Orders Fulfillment Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shopify MCP Client - Execute Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Orders Fulfillment Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shopify MCP Client - List Tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "Orders Fulfillment Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pictorem MCP Client - Execute Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Orders Fulfillment Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pictorem MCP Client - List Tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "Orders Fulfillment Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edition Management Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Orders Fulfillment Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Certificate Generation Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Orders Fulfillment Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Orders Fulfillment Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Orders Fulfillment Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orders Fulfillment Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shopify Order Webhook": {
+      "main": [
+        [
+          {
+            "node": "Orders Fulfillment Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  ],
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "orders-fulfillment-agent-vividwalls"
+  }
+}

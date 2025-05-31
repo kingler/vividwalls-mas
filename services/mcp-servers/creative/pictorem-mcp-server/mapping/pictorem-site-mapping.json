@@ -1,0 +1,48 @@
+{
+  "metadata": {
+    "mapped_date": "2025-05-29T17:46:14.062Z",
+    "site_url": "https://www.pictorem.com",
+    "mapper_version": "1.0.0",
+    "authenticated": true
+  },
+  "authentication": {
+    "email_field": "input[name=\"email\"]",
+    "password_field": "input[type=\"password\"]",
+    "submit_button": "input[type=\"submit\"]",
+    "login_url": "https://www.pictorem.com/myaccount.html",
+    "success_indicator": "url_redirect"
+  },
+  "upload_flow": {
+    "upload_url": "https://www.pictorem.com/order.html?hash=6e8a95d00baa87ce6122638d50a2e7f2&create=1&view=&prod=canvas",
+    "start_order_button": "a:has-text(\"Start Order\")"
+  },
+  "product_configuration": {
+    "width_selector": "select[name=\"width\"]",
+    "height_selector": "select[name=\"height\"]"
+  },
+  "pricing": {},
+  "checkout_flow": {
+    "checkout_trigger": "a[href*=\"cart\"]",
+    "checkout_url": "https://www.pictorem.com/cart.html",
+    "customer_fields": {
+      "email": "input[name=\"email\"]"
+    },
+    "shipping_fields": {
+      "email": "input[name=\"email\"]"
+    }
+  },
+  "payment_methods": {
+    "card_fields": {
+      "email": "input[name=\"email\"]"
+    }
+  },
+  "order_confirmation": {},
+  "navigation": {
+    "upload": "a:has-text(\"Start Order\")",
+    "gallery": "a[href*=\"products\"]",
+    "account": "a[href*=\"account\"]",
+    "cart": "a[href*=\"cart\"]",
+    "formats": "a:has-text(\"FORMATS & PRICES\")"
+  },
+  "error_patterns": {}
+}

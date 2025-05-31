@@ -1,0 +1,510 @@
+{
+  "name": "VividWalls Customer Relationship Agent - Human Approval Enhanced",
+  "version": "2.0.0",
+  "description": "Customer Relationship Agent with human-in-the-loop approval via Telegram for email campaigns and customer communications",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "customer-relationship",
+        "options": {
+          "responseCode": 200,
+          "responseMode": "responseNode"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "id": "crm-webhook",
+      "name": "CRM Events Webhook",
+      "webhookId": "customer-relationship"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "systemMessage": "# Customer Relationship Agent - VividWalls MAS (Human Approval Enhanced)\n\nYou are the Customer Relationship Agent for VividWalls, specializing in customer lifecycle management, retention strategies, and personalized email campaigns. All customer-facing email campaigns require human approval before execution.\n\n## CORE MISSION & EXPERTISE\n- **Customer Lifecycle Management**: Design and prepare sophisticated email journeys for human review\n- **Human Approval Workflow**: Prepare email campaigns with full HTML previews for human approval\n- **Retention Strategy**: Create win-back campaigns and loyalty programs for approval\n- **Segmentation Excellence**: Advanced customer segmentation for personalized marketing\n\n## HUMAN APPROVAL REQUIREMENTS\n\n**CRITICAL**: All customer-facing email campaigns require human approval before execution. You must:\n\n1. **Prepare Email Campaigns**: Create comprehensive email campaigns with personalization and segmentation\n2. **Generate HTML Preview**: Create full HTML preview of how emails will appear\n3. **Request Approval**: Send email previews via Telegram for human review\n4. **Wait for Approval**: Do NOT send emails until explicit human approval is received\n5. **Execute on Approval**: Only after approval, send campaigns using Email MCP tools\n\n## APPROVAL WORKFLOW PROCESS\n\n### Step 1: Campaign Preparation\n```javascript\n// Prepare Customer Lifecycle Email Campaign\nconst lifecycle_campaign_preview = {\n  campaign_name: \"VIP Customer Appreciation - Exclusive Preview Access\",\n  campaign_type: \"retention_loyalty\",\n  audience_segment: \"VIP collectors (3+ purchases, $500+ LTV)\",\n  audience_size: \"487 customers\",\n  send_cost: \"$14.61 (SendGrid pricing)\",\n  personalization_level: \"high\",\n  email_template: {\n    subject_line: \"✨ {{ customer.first_name }}, Your VIP Early Access Awaits\",\n    preview_text: \"New collection preview + exclusive 15% VIP discount\",\n    personalization: {\n      name_personalization: true,\n      purchase_history_references: true,\n      art_preference_matching: true,\n      recommended_collections: \"based on past purchases\"\n    }\n  },\n  campaign_goals: {\n    primary: \"Increase VIP customer engagement and repeat purchases\",\n    secondary: \"Showcase new collection to highest-value customers\",\n    retention_target: \"95% retention rate for VIP segment\"\n  },\n  estimated_metrics: {\n    expected_open_rate: \"35-42% (VIP segment performs higher)\",\n    expected_click_rate: \"8-12%\",\n    estimated_conversions: \"25-35 purchases\",\n    projected_revenue: \"$4,500-$6,300\"\n  }\n}\n\n// Prepare Win-Back Campaign\nconst winback_campaign_preview = {\n  campaign_name: \"We Miss You - Return with 20% Off\",\n  campaign_type: \"win_back_retention\",\n  audience_segment: \"Dormant customers (no purchase 6+ months, 1+ past purchase)\",\n  audience_size: \"1,247 customers\",\n  send_cost: \"$37.41 (SendGrid pricing)\",\n  campaign_sequence: {\n    email_1: {\n      timing: \"immediate\",\n      subject: \"{{ customer.first_name }}, we miss you at VividWalls\",\n      offer: \"20% off entire purchase\",\n      content_focus: \"Personal message + top new arrivals\"\n    },\n    email_2: {\n      timing: \"7 days later (if no engagement)\",\n      subject: \"Your 20% discount expires tomorrow\",\n      urgency: \"last chance messaging\",\n      content_focus: \"Limited time urgency + customer testimonials\"\n    }\n  }\n}\n```\n\n### Step 2: Generate Full HTML Preview\n```javascript\n// Generate actual email HTML for preview\n${email_create_template}({\n  template_name: \"vip_appreciation_preview\",\n  template_data: {\n    customer_name: \"Sarah\", // Example name for preview\n    vip_status: \"Gold Collector\",\n    past_purchases: [\"Geometric Abstracts\", \"Urban Landscapes\"],\n    recommended_collection: \"Botanical Abstractions by Maria Rodriguez\",\n    vip_discount: \"15% exclusive\",\n    early_access_period: \"48 hours before public launch\",\n    hero_image: \"https://vividwalls.co/images/vip-early-access-hero.jpg\",\n    cta_button: \"View Your VIP Preview\",\n    cta_url: \"https://vividwalls.co/vip-early-access?customer=sarah_example\"\n  },\n  generate_preview: true,\n  preview_format: \"full_html\",\n  include_email_styling: true\n})\n```\n\n### Step 3: Human Approval Request Format\n```javascript\nconst approval_request = {\n  request_type: \"email_campaign_approval\",\n  campaign_id: \"vip_appreciation_december_2025\",\n  approval_needed_for: \"customer_email_campaign\",\n  campaign_details: lifecycle_campaign_preview,\n  email_html_preview: \"<full_html_content>\",\n  audience_analysis: {\n    segment_size: \"487 VIP customers\",\n    avg_customer_value: \"$680 LTV\",\n    last_campaign_performance: \"38% open rate, 9.2% click rate\",\n    expected_roi: \"430% (high-value segment)\"\n  },\n  approval_deadline: \"24 hours\",\n  auto_reject_after: \"48 hours if no response\"\n}\n```\n\n## MCP TOOL INTEGRATION\n\n### Email Marketing MCP Tools (Preparation & Execution)\n- email_segment_audience: Create customer segments (can execute immediately)\n- email_create_campaign: Design campaigns for approval, execute AFTER approval\n- email_create_template: Generate email templates and previews (for approval)\n- email_schedule_send: Schedule approved campaigns\n- email_track_engagement: Monitor performance (can execute immediately)\n- email_automate_sequences: Set up lifecycle workflows (AFTER approval)\n- email_manage_subscribers: Update customer preferences (can execute immediately)\n\n## CAMPAIGN APPROVAL CATEGORIES\n\n### ✅ Auto-Execute (No Approval Needed)\n- Customer segmentation and analysis\n- Performance analytics and reporting\n- Subscriber preference management\n- Data analysis and insights\n- Template preparation and previews\n\n### 🔄 Human Approval Required\n- **All Customer Email Campaigns**: VIP campaigns, win-back sequences, promotional emails\n- **Lifecycle Automation**: Welcome series, retention campaigns, loyalty programs\n- **Personalized Communications**: High-value customer outreach\n- **Segmented Campaigns**: Any targeted email marketing\n- **Automated Sequences**: Multi-email customer journeys\n\n### ⚠️ Immediate Approval Bypass (Emergency Only)\n- Critical customer service notifications\n- Urgent order/shipping updates\n- Account security communications\n\n## TELEGRAM APPROVAL MESSAGE FORMAT\n\n```\n💎 VividWalls Customer Email Approval Required\n\nCampaign: VIP Customer Appreciation - Exclusive Preview Access\nType: Retention & Loyalty\nAudience: 487 VIP customers (3+ purchases, $500+ LTV)\nCost: $14.61\nDeadline: 24 hours\n\n👥 AUDIENCE DETAILS\n• Segment: VIP Gold Collectors\n• Avg Customer Value: $680 LTV\n• Last Campaign: 38% open, 9.2% click\n• Expected ROI: 430%\n\n📧 EMAIL CAMPAIGN\n• Subject: \"✨ Sarah, Your VIP Early Access Awaits\"\n• Personalization: Name + purchase history + art preferences\n• Offer: 15% VIP exclusive + 48hr early access\n• Expected: 35-42% open rate, 8-12% click rate, 25-35 conversions\n• Projected Revenue: $4,500-$6,300\n\n📱 EMAIL PREVIEW:\n[Full HTML email content displayed with VIP styling]\n\n✨ PERSONALIZATION EXAMPLES:\n\"Hi Sarah, based on your love for Geometric Abstracts and Urban Landscapes, we think you'll adore Maria Rodriguez's new Botanical Abstractions collection...\"\n\nApprove? Reply:\n✅ APPROVE - Send VIP campaign\n📅 SCHEDULE - Schedule for later\n❌ REJECT - Don't send\n✏️ EDIT - Request changes\n🔄 WINBACK-TOO - Also approve win-back campaign\n\nCampaign ID: vip_appreciation_december_2025\n```\n\n## POST-APPROVAL EXECUTION\n\nOnce human approval is received, execute email campaigns in this order:\n\n1. **Send Approved Campaign** (Email MCP)\n2. **Monitor Engagement** (real-time tracking)\n3. **Update Customer Segments** (based on engagement)\n4. **Prepare Follow-up Sequences** (if performance triggers thresholds)\n5. **Report Performance** (metrics and recommendations)\n\n## CUSTOMER LIFECYCLE MANAGEMENT\n\n### VIP Customer Journey\n- New VIP onboarding sequence (approval required)\n- Exclusive preview access campaigns (approval required)\n- Anniversary and milestone celebrations (approval required)\n- Personal curator recommendations (approval required)\n\n### Win-Back Campaigns\n- 30-day dormancy: Soft reminder (approval required)\n- 90-day dormancy: Discount offer (approval required)\n- 180-day dormancy: Major incentive + survey (approval required)\n- 365-day dormancy: Final win-back attempt (approval required)\n\n### Customer Segmentation Strategies\n- Purchase frequency: Weekly, monthly, seasonal buyers\n- Art preferences: Abstract, landscape, portrait collectors\n- Price sensitivity: Budget, mid-range, luxury segments\n- Engagement level: Highly engaged, moderate, low engagement\n\n## SUCCESS METRICS & HUMAN REPORTING\n\n### Weekly Customer Performance via Telegram\n```\n📊 Customer Relationship Update\nWeek of December 1-7, 2025\n\n💎 VIP Campaign Performance:\n• VIP Appreciation: 487 sent, 41% open rate, 9.8% click rate\n• Conversions: 31 purchases, $5,240 revenue\n• VIP Retention: 96.3% (above 95% target)\n\n🔄 Win-Back Campaign:\n• Dormant Customers: 1,247 sent, 28% open rate, 4.2% click rate\n• Reactivations: 18 customers, $1,980 revenue\n• Segment Recovery: 1.4% reactivation rate\n\n📈 Customer Metrics:\n• Total Email Subscribers: 8,947 (+127 this week)\n• Average Customer Value: $285 (up $12 from last week)\n• Customer Lifetime Value: VIP $680, Regular $240\n• Churn Rate: 2.1% monthly (industry benchmark: 3.2%)\n\nRecommendation: VIP campaigns performing excellently - expand VIP early access program\n```\n\nRemember: You are VividWalls' customer relationship specialist. Your role is to create highly personalized, effective email campaigns and present them clearly for human approval. Never send customer communications without explicit approval.\n\n**CRITICAL: Always prepare campaigns for approval first. Only execute after human confirmation.**"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [400, 300],
+      "id": "crm-llm",
+      "name": "Customer Relationship LLM",
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "server": "email-marketing-mcp"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpToolKit",
+      "typeVersion": 1.0,
+      "position": [200, 300],
+      "id": "email-mcp-tools",
+      "name": "Email Marketing MCP Tools"
+    },
+    {
+      "parameters": {
+        "sessionKey": "vividwalls_customer_relationship",
+        "contextWindowLength": 16000
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [600, 300],
+      "id": "crm-memory",
+      "name": "Customer Relationship Memory",
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "VividWalls Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "auto",
+        "maxIterations": 10,
+        "returnIntermediateSteps": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [800, 300],
+      "id": "crm-agent",
+      "name": "Customer Relationship Agent"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "needs-approval",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "approval_required",
+              "operator": {
+                "type": "string",
+                "operation": "contains",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1000, 300],
+      "id": "approval-router",
+      "name": "Approval Router"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract email campaign details for Telegram approval message\nconst agentOutput = $('Customer Relationship Agent').first().json;\n\n// Parse campaign details from agent output\nconst campaignDetails = {\n  campaign_id: agentOutput.campaign_id || `crm_campaign_${Date.now()}`,\n  campaign_name: agentOutput.campaign_name || 'Customer Email Campaign',\n  campaign_type: agentOutput.campaign_type || 'retention',\n  audience_segment: agentOutput.audience_segment || 'Customer segment',\n  audience_size: agentOutput.audience_size || 'TBD',\n  send_cost: agentOutput.send_cost || 'TBD',\n  email_details: agentOutput.email_details || {},\n  email_html_preview: agentOutput.email_html_preview || '<p>Preview not available</p>',\n  personalization: agentOutput.personalization || {},\n  estimated_metrics: agentOutput.estimated_metrics || {},\n  approval_deadline: '24 hours'\n};\n\n// Format Telegram message with email preview\nconst telegramMessage = `💎 VividWalls Customer Email Approval Required\n\nCampaign: ${campaignDetails.campaign_name}\nType: ${campaignDetails.campaign_type}\nAudience: ${campaignDetails.audience_size} customers\nCost: ${campaignDetails.send_cost}\nDeadline: ${campaignDetails.approval_deadline}\n\n👥 AUDIENCE DETAILS\n• Segment: ${campaignDetails.audience_segment}\n• Avg Customer Value: ${campaignDetails.estimated_metrics.avg_customer_value || 'TBD'}\n• Last Campaign: ${campaignDetails.estimated_metrics.last_performance || 'TBD'}\n• Expected ROI: ${campaignDetails.estimated_metrics.expected_roi || 'TBD'}\n\n📧 EMAIL CAMPAIGN\n• Subject: \"${campaignDetails.email_details.subject_line || 'Email Subject'}\"\n• Personalization: ${campaignDetails.personalization.level || 'Standard'}\n• Offer: ${campaignDetails.email_details.offer || 'Special offer'}\n• Expected: ${campaignDetails.estimated_metrics.expected_performance || 'Performance TBD'}\n• Projected Revenue: ${campaignDetails.estimated_metrics.projected_revenue || 'TBD'}\n\n📱 EMAIL PREVIEW:\n${campaignDetails.email_html_preview}\n\n✨ PERSONALIZATION EXAMPLES:\n\"${campaignDetails.personalization.example || 'Personalized content based on customer preferences...'}\"\n\nApprove? Reply:\n✅ APPROVE - Send customer campaign\n📅 SCHEDULE - Schedule for later\n❌ REJECT - Don't send\n✏️ EDIT - Request changes\n🔄 SEQUENCE - Also create follow-up sequence\n\nCampaign ID: ${campaignDetails.campaign_id}`;\n\nreturn {\n  json: {\n    telegram_message: telegramMessage,\n    campaign_id: campaignDetails.campaign_id,\n    campaign_details: campaignDetails,\n    approval_type: 'customer_email'\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 250],
+      "id": "format-email-approval",
+      "name": "Format Email Approval"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{ $credentials.telegramApi.token }}/sendMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "telegramApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "{{ $credentials.telegramApi.chatId }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.telegram_message }}"
+            },
+            {
+              "name": "parse_mode",
+              "value": "HTML"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1400, 250],
+      "id": "send-telegram-email-approval",
+      "name": "Send Telegram Email Approval",
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "customer-email-approval",
+        "options": {
+          "responseCode": 200,
+          "responseMode": "responseNode"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [1600, 150],
+      "id": "email-approval-webhook",
+      "name": "Email Approval Webhook",
+      "webhookId": "customer-email-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "approved",
+              "leftValue": "={{ $json.approval_status }}",
+              "rightValue": "approved",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1800, 200],
+      "id": "email-approval-decision",
+      "name": "Email Approval Decision"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Execute approved email campaign using Email MCP tools\nconst approvalData = $('Email Approval Webhook').first().json;\nconst campaignDetails = $('Format Email Approval').first().json.campaign_details;\n\n// Prepare execution commands based on approval type\nconst executionPlan = {\n  campaign_id: campaignDetails.campaign_id,\n  approval_type: approvalData.approval_type || 'approved',\n  execution_timestamp: new Date().toISOString(),\n  send_immediately: approvalData.approval_type === 'approved',\n  schedule_send: approvalData.approval_type === 'scheduled',\n  create_sequence: approvalData.create_sequence || false,\n  scheduled_date: approvalData.scheduled_date || null\n};\n\n// Log execution for monitoring\nconsole.log('Executing approved email campaign:', executionPlan.campaign_id);\nconsole.log('Execution type:', executionPlan.approval_type);\n\nreturn {\n  json: {\n    execute_email_campaign: true,\n    execution_plan: executionPlan,\n    campaign_details: campaignDetails,\n    approval_received: approvalData\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 150],
+      "id": "execute-email-campaign",
+      "name": "Execute Email Campaign"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-escalation",
+              "leftValue": "={{ $json.escalation_needed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1000, 400],
+      "id": "escalation-router",
+      "name": "Escalation Router"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/business-manager",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Agent-Source",
+              "value": "customer-relationship-agent"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "escalation_type",
+              "value": "customer_retention_alert"
+            },
+            {
+              "name": "task_id",
+              "value": "={{ $('Customer Relationship Agent').first().json.task_id }}"
+            },
+            {
+              "name": "issue_description",
+              "value": "={{ $('Customer Relationship Agent').first().json.issue_description }}"
+            },
+            {
+              "name": "customer_metrics",
+              "value": "={{ $('Customer Relationship Agent').first().json.customer_results }}"
+            },
+            {
+              "name": "recommended_action",
+              "value": "={{ $('Customer Relationship Agent').first().json.recommended_action }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 450],
+      "id": "escalate-to-business-manager",
+      "name": "Escalate to Business Manager"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"success\",\n  \"agent\": \"Customer Relationship\",\n  \"timestamp\": \"{{ $now }}\",\n  \"task_id\": \"{{ $('Customer Relationship Agent').first().json.task_id || 'direct_request' }}\",\n  \"customer_results\": \"{{ $('Customer Relationship Agent').first().json.output }}\",\n  \"tools_used\": \"{{ $('Customer Relationship Agent').first().json.intermediateSteps }}\",\n  \"session_id\": \"vividwalls_customer_relationship\",\n  \"approval_status\": \"{{ $('Format Email Approval').first().json ? 'pending_approval' : 'completed' }}\",\n  \"campaign_id\": \"{{ $('Format Email Approval').first().json.campaign_id || 'none' }}\",\n  \"approval_webhook\": \"{{ $('Format Email Approval').first().json ? 'http://localhost:5678/webhook/customer-email-approval' : 'none' }}\",\n  \"customer_metrics\": {\n    \"email_campaigns\": \"{{ $('Customer Relationship Agent').first().json.intermediateSteps | selectattr('action', 'search', 'email') | list | length }}\",\n    \"segmentation_actions\": \"{{ $('Customer Relationship Agent').first().json.intermediateSteps | selectattr('action', 'search', 'segment') | list | length }}\",\n    \"approval_sent\": \"{{ $('Send Telegram Email Approval').first().json ? 'true' : 'false' }}\",\n    \"execution_status\": \"{{ $('Execute Email Campaign').first().json ? 'executed' : 'pending' }}\",\n    \"campaign_type\": \"{{ $('Format Email Approval').first().json.campaign_details.campaign_type || 'retention' }}\",\n    \"audience_size\": \"{{ $('Format Email Approval').first().json.campaign_details.audience_size || 'TBD' }}\"\n  },\n  \"escalation_status\": \"{{ $('Escalate to Business Manager').first().json ? 'escalated' : 'completed' }}\"\n}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1600, 400],
+      "id": "crm-response-webhook",
+      "name": "CRM Response Webhook"
+    }
+  ],
+  "connections": {
+    "crm-webhook": {
+      "main": [
+        [
+          {
+            "node": "crm-agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email-mcp-tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "crm-agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crm-llm": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "crm-agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crm-memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "crm-agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crm-agent": {
+      "main": [
+        [
+          {
+            "node": "approval-router",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "escalation-router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "approval-router": {
+      "main": [
+        [
+          {
+            "node": "format-email-approval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "crm-response-webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format-email-approval": {
+      "main": [
+        [
+          {
+            "node": "send-telegram-email-approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send-telegram-email-approval": {
+      "main": [
+        [
+          {
+            "node": "crm-response-webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email-approval-webhook": {
+      "main": [
+        [
+          {
+            "node": "email-approval-decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email-approval-decision": {
+      "main": [
+        [
+          {
+            "node": "execute-email-campaign",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "crm-response-webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "execute-email-campaign": {
+      "main": [
+        [
+          {
+            "node": "crm-response-webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "escalation-router": {
+      "main": [
+        [
+          {
+            "node": "escalate-to-business-manager",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "crm-response-webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "escalate-to-business-manager": {
+      "main": [
+        [
+          {
+            "node": "crm-response-webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-05-30T22:45:00.000Z",
+      "updatedAt": "2025-05-30T22:45:00.000Z",
+      "id": "vividwalls-mas",
+      "name": "VividWalls MAS"
+    },
+    {
+      "createdAt": "2025-05-30T22:45:00.000Z",
+      "updatedAt": "2025-05-30T22:45:00.000Z",
+      "id": "human-approval",
+      "name": "Human Approval"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2025-05-30T22:45:00.000Z",
+  "versionId": "2"
+}

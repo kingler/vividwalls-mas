@@ -1,0 +1,315 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Setup Project Repository and Environment",
+      "description": "Initialize the FastMCP project repository with proper structure and environment configuration",
+      "status": "in-progress",
+      "dependencies": [],
+      "priority": "high",
+      "details": "Create a new FastMCP project repository with the following structure: config/, src/, tests/, docs/. Set up a .env.example file with placeholders for all required API keys and database connection strings. Create a requirements.txt file including FastMCP, OpenAI, psycopg2-binary, pgvector, and other necessary dependencies. Initialize Git repository with appropriate .gitignore file.",
+      "testStrategy": "Verify project structure is correct and all configuration files are in place. Ensure environment can be set up following the .env.example template.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Initialize FastMCP project structure",
+          "description": "Create the basic FastMCP server structure with server.py entry point",
+          "details": "Create mcp/color-psychology-mcp-server/ directory structure with proper Python package layout including __init__.py files",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 1
+        },
+        {
+          "id": 2,
+          "title": "Create requirements.txt with dependencies",
+          "description": "Add all required Python dependencies for the project",
+          "details": "Include: fastmcp, openai, psycopg2-binary, pgvector, pillow, opencv-python, numpy, scikit-image, python-dotenv, aiohttp, loguru",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 1
+        },
+        {
+          "id": 3,
+          "title": "Create .env.example configuration",
+          "description": "Create example environment configuration file",
+          "details": "Include: OPENAI_API_KEY, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DATABASE, LOG_LEVEL, DEBUG, VIVIDWALLS_CATALOG_PATH",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 1
+        },
+        {
+          "id": 4,
+          "title": "Implement modular logging system",
+          "description": "Create a Winston-style modular logging utility",
+          "details": "Create utils/logger.py with configurable log levels, file and console output, structured logging format, and integration with all modules",
+          "status": "in-progress",
+          "dependencies": [],
+          "parentTaskId": 1
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Configure PostgreSQL with pgvector Extension",
+      "description": "Set up Docker Compose configuration for PostgreSQL with pgvector extension for vector database storage",
+      "status": "pending",
+      "dependencies": [
+        1
+      ],
+      "priority": "high",
+      "details": "Create a docker-compose.yml file that configures PostgreSQL with pgvector extension. Include volume mapping for data persistence. Follow vector-database-connection.mdc rules for database connections. Create initialization scripts to set up required tables and extensions automatically. Implement database connection utility functions in the codebase.",
+      "testStrategy": "Verify Docker Compose successfully starts PostgreSQL with pgvector. Test connection to database using the utility functions. Confirm vector operations work correctly."
+    },
+    {
+      "id": 3,
+      "title": "Implement Color Theory Knowledge Base",
+      "description": "Convert color-theory.md content into a vector database using PostgreSQL with pgvector extension",
+      "status": "pending",
+      "dependencies": [
+        2
+      ],
+      "priority": "high",
+      "details": "Parse the color-theory.md file and extract key concepts, principles, and relationships. Generate embeddings for each entry using OpenAI's embedding API. Store these embeddings in the PostgreSQL database with pgvector. Create tables for color theory principles, relationships, and psychological effects. Implement semantic search functionality to query the knowledge base. Expose this as an MCP resource/tool for LLM access.",
+      "testStrategy": "Test semantic search with various color-related queries. Verify accuracy of returned results against original color-theory.md content. Ensure MCP resource correctly exposes the knowledge base."
+    },
+    {
+      "id": 4,
+      "title": "Develop Image Processing Pipeline",
+      "description": "Create a pipeline to process customer-uploaded room images using OpenAI GPT-4o Vision API",
+      "status": "pending",
+      "dependencies": [
+        1
+      ],
+      "priority": "high",
+      "details": "Implement an image upload endpoint that accepts room/space images. Use OpenAI GPT-4o Vision API to analyze the image for object detection and spatial analysis. Develop logic to identify and remove humans and animals from analysis. Map furniture placement and relationships. Identify all wall surfaces and determine optimal wall for artwork placement. Extract comprehensive color palette from the space with hex color codes for each identified item. Format results as HTML/CSS grid.",
+      "testStrategy": "Test with various room images to verify correct object detection, wall identification, and color extraction. Validate hex color codes against manual inspection. Ensure humans and animals are properly excluded from analysis.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement OpenAI Vision API integration",
+          "description": "Create module for OpenAI GPT-4o Vision API calls",
+          "details": "Create image_processing/vision_api.py with functions for image analysis, object detection, spatial analysis. Follow OpenAI image generation guide for proper API usage",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 4
+        },
+        {
+          "id": 2,
+          "title": "Create color extraction module",
+          "description": "Implement color palette extraction from room images",
+          "details": "Create image_processing/color_extractor.py using scikit-image and OpenCV for color clustering, dominant color extraction, and hex code generation",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 4
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Create Artwork Analysis System",
+      "description": "Develop a system to batch process VividWalls artwork catalog using OpenAI Vision API",
+      "status": "pending",
+      "dependencies": [
+        2,
+        3
+      ],
+      "priority": "medium",
+      "details": "Create a batch processing system for the VividWalls artwork catalog (products_export.csv). Use OpenAI Vision API to extract color composition from each artwork. Analyze and store mood and tone attributes. Determine psychological impact of colors used and map emotional response indicators. Design and implement database tables to store artwork analysis results, linking color combinations to psychological effects, color attributes to emotional responses, and mood/tone classifications.",
+      "testStrategy": "Process a sample of artworks and verify color extraction accuracy. Validate psychological impact mapping against color theory knowledge base. Ensure all required attributes are correctly stored in the database."
+    },
+    {
+      "id": 6,
+      "title": "Implement Recommendation Engine Core",
+      "description": "Develop the core matching algorithm for the recommendation engine",
+      "status": "pending",
+      "dependencies": [
+        3,
+        4,
+        5
+      ],
+      "priority": "high",
+      "details": "Create an algorithm that matches customer room color palette with artwork attributes. Implement color harmony principles (complementary, analogous, triadic, etc.) based on the color theory knowledge base. Consider psychological compatibility between space and artwork. Design a scoring system that ranks recommendations based on color harmony score, psychological/emotional fit, and visual balance considerations.",
+      "testStrategy": "Test with various room color palettes and verify recommendations match expected color harmony principles. Validate scoring system produces consistent and appropriate rankings.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement color harmony scoring algorithm",
+          "description": "Create algorithm to score color harmony between room and artwork",
+          "details": "Create recommendation/color_harmony.py implementing complementary, analogous, triadic, and other color scheme scoring based on color-theory.md principles",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 6
+        },
+        {
+          "id": 2,
+          "title": "Create psychological compatibility scoring",
+          "description": "Implement scoring based on psychological effects of colors",
+          "details": "Create recommendation/psychological_analysis.py to analyze emotional and psychological compatibility between room colors and artwork, using color psychology principles from knowledge base",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 6
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Develop Image Generation Module",
+      "description": "Implement functionality to create composite images using OpenAI Image Generation API",
+      "status": "pending",
+      "dependencies": [
+        4
+      ],
+      "priority": "medium",
+      "details": "Create a module that uses OpenAI Image Generation API (gpt-4o, gpt-image-1) to generate composite images. Implement logic to ensure exact replication of both VividWalls artwork and customer room. Develop positioning algorithm to place artwork naturally on identified wall (hanging or leaning). Generate high-fidelity composite images showing artwork in space.",
+      "testStrategy": "Test with various room images and artwork combinations. Verify natural positioning and realistic integration of artwork into the space. Ensure image quality meets requirements."
+    },
+    {
+      "id": 8,
+      "title": "Create Color Palette Visualization",
+      "description": "Develop functionality to generate visual representation of extracted color palettes",
+      "status": "pending",
+      "dependencies": [
+        4
+      ],
+      "priority": "medium",
+      "details": "Create a module that generates visual representations of extracted color palettes with hex codes. Design an aesthetically pleasing format for displaying the color palette. Implement functionality to generate a detailed list of room items with associated colors. Integrate with the image processing pipeline to automatically generate these visualizations for each processed room.",
+      "testStrategy": "Test with various room images and verify color palette visualizations are accurate and visually appealing. Ensure hex codes match extracted colors."
+    },
+    {
+      "id": 9,
+      "title": "Implement Psychological Analysis Module",
+      "description": "Develop functionality to analyze psychological aspects of color relationships",
+      "status": "pending",
+      "dependencies": [
+        3,
+        5,
+        6
+      ],
+      "priority": "medium",
+      "details": "Create a module that analyzes the psychological aspects of color relationships between room and artwork. Use the color theory knowledge base to generate insights about emotional and psychological impacts. Implement natural language generation to create human-readable analysis of these relationships. Format output as part of the final deliverable.",
+      "testStrategy": "Test with various room-artwork combinations and verify psychological analysis is accurate and insightful. Validate against color theory principles."
+    },
+    {
+      "id": 10,
+      "title": "Develop MCP Server Endpoints",
+      "description": "Expose all major functions as MCP tools/resources with proper API design",
+      "status": "pending",
+      "dependencies": [
+        4,
+        6,
+        7,
+        8,
+        9
+      ],
+      "priority": "high",
+      "details": "Implement MCP server endpoints for all major functions using FastMCP framework. Create health check and status endpoints. Develop configuration endpoints for runtime adjustments. Add test endpoints for development validation. Ensure all endpoints follow MCP protocol standards and are properly documented. Implement proper error handling and retry logic for API calls.",
+      "testStrategy": "Test all endpoints with valid and invalid inputs. Verify correct responses and error handling. Ensure endpoints conform to MCP protocol standards.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Create FastMCP server with analyze_room tool",
+          "description": "Implement MCP tool for room image analysis",
+          "details": "Create server.py with @mcp.tool() decorator for analyze_room function that accepts image upload and returns color palette, spatial analysis, and wall identification",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 10
+        },
+        {
+          "id": 2,
+          "title": "Implement recommend_artwork MCP tool",
+          "description": "Create MCP tool for artwork recommendations",
+          "details": "Add @mcp.tool() decorated function that takes room analysis results and returns top 3 artwork recommendations with composite images, color harmony scores, and psychological insights",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 10
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Implement Caching System",
+      "description": "Develop caching mechanism for artwork analysis results to improve performance",
+      "status": "pending",
+      "dependencies": [
+        5,
+        6
+      ],
+      "priority": "low",
+      "details": "Design and implement a caching system for artwork analysis results to avoid redundant processing. Use database or in-memory caching depending on deployment requirements. Implement cache invalidation strategies for when artwork catalog is updated. Optimize vector search for sub-second response times.",
+      "testStrategy": "Measure performance with and without caching. Verify cached results match fresh analysis. Test cache invalidation to ensure updated data is properly reflected."
+    },
+    {
+      "id": 12,
+      "title": "Implement Security Features",
+      "description": "Add security measures for API keys, input validation, and rate limiting",
+      "status": "pending",
+      "dependencies": [
+        10
+      ],
+      "priority": "high",
+      "details": "Implement secure storage of API keys and credentials using environment variables. Add input validation for uploaded images (size, format, content). Develop rate limiting for API endpoints to prevent abuse. Ensure proper error handling to avoid information leakage. Implement logging that captures security events without exposing sensitive information.",
+      "testStrategy": "Test with malformed inputs and verify proper validation. Attempt to exceed rate limits and confirm enforcement. Review logs to ensure sensitive information is not exposed."
+    },
+    {
+      "id": 13,
+      "title": "Create Comprehensive Logging System",
+      "description": "Implement detailed logging throughout the application using Python logging module",
+      "status": "pending",
+      "dependencies": [
+        10
+      ],
+      "priority": "medium",
+      "details": "Set up Python logging module with appropriate log levels (DEBUG, INFO, WARNING, ERROR, CRITICAL). Implement structured logging for machine-readable logs. Add context-specific logging throughout all modules. Configure log rotation and storage. Ensure logs provide sufficient information for debugging without exposing sensitive data.",
+      "testStrategy": "Trigger various application flows and verify appropriate log entries are generated. Check log format and content for completeness and security."
+    },
+    {
+      "id": 14,
+      "title": "Develop Test Suite",
+      "description": "Create comprehensive test suite for core functionality",
+      "status": "pending",
+      "dependencies": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "priority": "medium",
+      "details": "Implement unit tests for all core modules. Create integration tests for end-to-end workflows. Develop performance tests to verify system meets timing requirements. Add test fixtures with sample room images and artwork data. Implement CI/CD pipeline for automated testing.",
+      "testStrategy": "Run test suite and verify all tests pass. Measure code coverage and ensure critical paths are covered. Validate performance tests meet the 30-second processing requirement."
+    },
+    {
+      "id": 15,
+      "title": "Create Documentation and Deployment Guide",
+      "description": "Develop comprehensive documentation and deployment instructions",
+      "status": "pending",
+      "dependencies": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "priority": "medium",
+      "details": "Create detailed API documentation for all endpoints. Write setup instructions for local development. Develop a deployment guide for production environment. Document database schema and data models. Create user guides for interacting with the system. Include troubleshooting section for common issues.",
+      "testStrategy": "Have a team member follow documentation to set up and deploy the system. Verify all steps are clear and accurate. Ensure API documentation matches actual implementation."
+    }
+  ],
+  "metadata": {
+    "projectName": "VividWalls Color Palette Agent MCP Server",
+    "totalTasks": 15,
+    "sourceFile": "prd.txt",
+    "generatedAt": "2023-07-10"
+  }
+}

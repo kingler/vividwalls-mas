@@ -1,0 +1,658 @@
+{
+  "meta": {
+    "instanceId": "vividwalls-orders-fulfillment-agent"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "shopify-order-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "aa1b2334-bc12-4d34-ef56-bc7e8e9f0a1b",
+      "name": "Shopify Order Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "shopify-order-webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fulfillment_context",
+              "name": "fulfillment_context",
+              "value": "{\n  \"agent_role\": \"Orders Fulfillment Agent\",\n  \"business_context\": \"VividWalls Premium Limited Edition Art Print Processing\",\n  \"mission\": \"Transform Shopify orders into perfectly executed Pictorem print jobs with gallery-quality standards\",\n  \"sla_targets\": {\n    \"processing_time\": \"< 2 hours\",\n    \"submission_accuracy\": \"> 99.9%\",\n    \"edition_accuracy\": \"100%\",\n    \"quality_issue_rate\": \"< 0.5%\",\n    \"on_time_delivery\": \"> 95%\"\n  },\n  \"quality_standards\": {\n    \"materials\": \"archival_canvas_pigment_inks\",\n    \"presentation\": \"gallery_ready_floating_frames\",\n    \"authentication\": \"numbered_signed_with_certificate\",\n    \"packaging\": \"premium_protective_presentation\"\n  }\n}",
+              "type": "object"
+            },
+            {
+              "id": "order_data",
+              "name": "order_data",
+              "value": "={{ $json.body }}",
+              "type": "object"
+            },
+            {
+              "id": "order_id",
+              "name": "order_id",
+              "value": "={{ $json.body.id }}",
+              "type": "string"
+            },
+            {
+              "id": "customer_info",
+              "name": "customer_info",
+              "value": "={{ $json.body.customer }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bb2c3445-cd23-4e45-fg67-cd8f9f0g1b2c",
+      "name": "Process Order Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "payment_status",
+              "leftValue": "={{ $json.order_data.financial_status }}",
+              "rightValue": "paid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "rightType": "string"
+              }
+            },
+            {
+              "id": "fulfillment_status",
+              "leftValue": "={{ $json.order_data.fulfillment_status }}",
+              "rightValue": "null",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "rightType": "string"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cc3d4556-de34-4f56-gh78-de9g0g1h2c3d",
+      "name": "Validate Order Status",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [740, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/mcp/shopify/get-order",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "order_id",
+              "value": "={{ $json.order_id }}"
+            },
+            {
+              "name": "include_line_items",
+              "value": "true"
+            },
+            {
+              "name": "include_customer",
+              "value": "true"
+            },
+            {
+              "name": "include_shipping",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dd4e5667-ef45-4g67-hi89-ef0h1h2i3d4e",
+      "name": "Retrieve Complete Order Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [980, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced order validation with recursive checks\nconst orderData = $input.item.json.order_data;\nconst shopifyOrder = $input.item.json.shopify_order;\n\n// Validation framework\nconst validation = {\n  payment_validation: {\n    status: orderData.financial_status === 'paid',\n    gateway: orderData.gateway !== null,\n    amount: parseFloat(orderData.total_price) > 0\n  },\n  customer_validation: {\n    email: orderData.customer?.email?.includes('@'),\n    address: orderData.shipping_address !== null,\n    phone: orderData.customer?.phone !== null\n  },\n  product_validation: {\n    line_items_exist: orderData.line_items?.length > 0,\n    valid_products: true, // Will validate each line item\n    artwork_metadata: true\n  },\n  shipping_validation: {\n    address_complete: true,\n    shipping_method: orderData.shipping_lines?.length > 0,\n    deliverable: true\n  }\n};\n\n// Validate each line item for VividWalls requirements\nconst lineItemValidation = [];\nif (orderData.line_items) {\n  for (const item of orderData.line_items) {\n    const itemValidation = {\n      product_id: item.product_id,\n      variant_id: item.variant_id,\n      is_artwork: item.properties?.some(p => p.name === 'artwork_type'),\n      has_edition_info: item.properties?.some(p => p.name === 'edition_size'),\n      price_valid: parseFloat(item.price) > 0,\n      quantity_valid: parseInt(item.quantity) > 0\n    };\n    lineItemValidation.push(itemValidation);\n  }\n}\n\n// Overall validation score\nconst validationScore = {\n  payment: Object.values(validation.payment_validation).every(v => v),\n  customer: Object.values(validation.customer_validation).every(v => v),\n  products: Object.values(validation.product_validation).every(v => v),\n  shipping: Object.values(validation.shipping_validation).every(v => v),\n  line_items: lineItemValidation.every(item => Object.values(item).every(v => v))\n};\n\nconst overallValid = Object.values(validationScore).every(v => v);\n\nreturn {\n  validation_results: validation,\n  line_item_validation: lineItemValidation,\n  validation_score: validationScore,\n  is_valid: overallValid,\n  validation_timestamp: new Date().toISOString(),\n  next_step: overallValid ? 'proceed_to_edition_assignment' : 'escalate_validation_failure'\n};"
+        },
+        "options": {}
+      },
+      "id": "ee5f6778-fg56-4h78-ij90-fg1i2i3j4e5f",
+      "name": "Comprehensive Order Validation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [980, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5432/api/edition_management",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "assign_edition_numbers"
+            },
+            {
+              "name": "order_id",
+              "value": "={{ $json.order_id }}"
+            },
+            {
+              "name": "line_items",
+              "value": "={{ $json.order_data.line_items }}"
+            },
+            {
+              "name": "customer_info",
+              "value": "={{ $json.customer_info }}"
+            },
+            {
+              "name": "edition_preferences",
+              "value": "next_available"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ff6g7889-gh67-4i89-jk01-gh2j3j4k5f6g",
+      "name": "Assign Edition Numbers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1220, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced VividWalls pricing calculation with Pictorem markup\nconst orderData = $input.item.json.order_data;\nconst editionData = $input.item.json.edition_assignments;\n\n// VividWalls pricing strategy (from ultimate plan)\nconst pricingRules = {\n  base_markup: 2.065, // 106.5% markup\n  pro_discount: 0.15, // Pictorem Pro discount\n  canvas_roll_discount: 0.25, // Additional canvas savings\n  premium_materials_cost: 1.2, // Archival materials premium\n  floating_frame_markup: 1.4 // Premium framing\n};\n\n// Calculate pricing for each line item\nconst pricingCalculations = [];\nfor (const item of orderData.line_items) {\n  // Base Pictorem cost estimation (reverse engineer from VividWalls price)\n  const vividwallsPrice = parseFloat(item.price);\n  const estimatedPictorem = vividwallsPrice / pricingRules.base_markup;\n  \n  // Apply discounts\n  const pictorem_discounted = estimatedPictorem * (1 - pricingRules.pro_discount);\n  const final_pictorem_cost = pictorem_discounted * (1 - pricingRules.canvas_roll_discount);\n  \n  // Determine size and material costs\n  const sizeCategory = item.variant_title?.includes('24x36') ? 'large' :\n                      item.variant_title?.includes('18x24') ? 'medium' : 'small';\n  \n  const materialCosts = {\n    small: { base: 35, premium: 42 },\n    medium: { base: 55, premium: 66 },\n    large: { base: 75, premium: 90 }\n  };\n  \n  const calculatedCost = materialCosts[sizeCategory].premium;\n  \n  const itemPricing = {\n    product_id: item.product_id,\n    variant_id: item.variant_id,\n    vividwalls_price: vividwallsPrice,\n    estimated_pictorem_cost: calculatedCost,\n    size_category: sizeCategory,\n    material_type: 'archival_canvas',\n    frame_type: 'floating_frame',\n    edition_number: editionData.assignments?.find(a => a.product_id === item.product_id)?.edition_number,\n    special_instructions: `Edition #${editionData.assignments?.find(a => a.product_id === item.product_id)?.edition_number} - Certificate included`\n  };\n  \n  pricingCalculations.push(itemPricing);\n}\n\n// Calculate total order cost for Pictorem\nconst totalPictorem = pricingCalculations.reduce((sum, item) => sum + item.estimated_pictorem_cost, 0);\nconst shippingCost = 15.00; // Standard shipping to Pictorem\n\nreturn {\n  pricing_calculations: pricingCalculations,\n  total_pictorem_cost: totalPictorem,\n  shipping_cost: shippingCost,\n  total_cost_with_shipping: totalPictorem + shippingCost,\n  pricing_timestamp: new Date().toISOString(),\n  next_step: 'submit_to_pictorem'\n};"
+        },
+        "options": {}
+      },
+      "id": "gg7h8990-hi78-4j90-kl12-hi3k4k5l6g7h",
+      "name": "Calculate VividWalls Pricing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1220, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/mcp/pictorem/submit-order",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "order_specifications",
+              "value": "={{ $json.pricing_calculations }}"
+            },
+            {
+              "name": "customer_details",
+              "value": "={{ $('Process Order Input').item.json.customer_info }}"
+            },
+            {
+              "name": "shipping_address",
+              "value": "={{ $('Process Order Input').item.json.order_data.shipping_address }}"
+            },
+            {
+              "name": "vividwalls_order_id",
+              "value": "={{ $('Process Order Input').item.json.order_id }}"
+            },
+            {
+              "name": "total_cost",
+              "value": "={{ $json.total_cost_with_shipping }}"
+            },
+            {
+              "name": "priority",
+              "value": "standard"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "hh8i9001-ij89-4k01-lm23-ij4l5l6m7h8i",
+      "name": "Submit Order to Pictorem",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1460, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/mcp/shopify/update-fulfillment",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "order_id",
+              "value": "={{ $('Process Order Input').item.json.order_id }}"
+            },
+            {
+              "name": "status",
+              "value": "submitted_to_production"
+            },
+            {
+              "name": "pictorem_order_id",
+              "value": "={{ $json.pictorem_order_id }}"
+            },
+            {
+              "name": "tracking_info",
+              "value": {
+                "provider": "Pictorem",
+                "status": "In Production",
+                "estimated_delivery": "7-10 business days"
+              }
+            },
+            {
+              "name": "fulfillment_notes",
+              "value": "Order submitted to Pictorem for premium art print production with archival materials and floating frame presentation."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ii9j0112-jk90-4l12-mn34-jk5m6m7n8i9j",
+      "name": "Update Shopify Fulfillment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1460, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate Certificate of Authenticity data\nconst orderData = $input.item.json.order_data;\nconst editionData = $input.item.json.edition_assignments;\nconst pricingData = $input.item.json.pricing_calculations;\n\n// Create certificates for each artwork\nconst certificates = [];\nfor (const item of pricingData) {\n  const editionInfo = editionData.assignments?.find(a => a.product_id === item.product_id);\n  \n  const certificate = {\n    certificate_id: `VW-${item.product_id}-${editionInfo?.edition_number}-${Date.now()}`,\n    artwork_title: item.variant_title || 'Limited Edition Print',\n    artist_name: 'VividWalls Artist', // Would come from product metadata\n    edition_number: editionInfo?.edition_number,\n    total_edition_size: editionInfo?.total_size || 100,\n    creation_date: new Date().toISOString().split('T')[0],\n    materials: 'Archival Canvas with Pigment Inks',\n    dimensions: item.size_category === 'large' ? '24x36 inches' : \n               item.size_category === 'medium' ? '18x24 inches' : '16x20 inches',\n    authenticity_statement: 'This limited edition print is authenticated by VividWalls and guaranteed to be an original work from our exclusive artist partnerships.',\n    investment_note: 'Limited edition artworks have historically appreciated 15-25% annually due to their exclusivity and premium materials.',\n    customer_name: orderData.customer?.first_name + ' ' + orderData.customer?.last_name,\n    purchase_date: new Date().toISOString().split('T')[0],\n    order_reference: orderData.id\n  };\n  \n  certificates.push(certificate);\n}\n\nreturn {\n  certificates: certificates,\n  total_certificates: certificates.length,\n  certificate_generation_timestamp: new Date().toISOString(),\n  next_step: 'notify_completion'\n};"
+        },
+        "options": {}
+      },
+      "id": "jj0k1223-kl01-4m23-no45-kl6n7n8o9j0k",
+      "name": "Generate Certificates of Authenticity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1460, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/business-manager/fulfillment-complete",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workflow_id",
+              "value": "order_fulfillment_complete"
+            },
+            {
+              "name": "from_agent",
+              "value": "orders_fulfillment_agent"
+            },
+            {
+              "name": "to_agent",
+              "value": "business_manager_agent"
+            },
+            {
+              "name": "message_type",
+              "value": "task_completion"
+            },
+            {
+              "name": "priority",
+              "value": "medium"
+            },
+            {
+              "name": "business_context",
+              "value": {
+                "order_id": "={{ $('Process Order Input').item.json.order_id }}",\n                "customer_id": "={{ $('Process Order Input').item.json.customer_info.id }}",\n                \"pictorem_order_id\": \"={{ $('Submit Order to Pictorem').item.json.pictorem_order_id }}\",\n                \"edition_assignments\": \"={{ $('Assign Edition Numbers').item.json.assignments }}\",\n                \"total_value\": \"={{ $('Process Order Input').item.json.order_data.total_price }}\",\n                \"certificates_generated\": \"={{ $json.total_certificates }}\"\n              }
+            },
+            {
+              "name": "success_criteria",
+              "value": ["order_submitted_to_pictorem", "edition_numbers_assigned", "certificates_generated", "shopify_updated"]
+            },
+            {
+              "name": "correlation_id",
+              "value": "={{ $('Process Order Input').item.json.order_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "kk1l2334-lm12-4n34-op56-lm7o8o9p0k1l",
+      "name": "Notify Business Manager",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1700, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Order fulfillment initiated successfully\",\n  \"order_id\": \"{{ $('Process Order Input').item.json.order_id }}\",\n  \"pictorem_order_id\": \"{{ $('Submit Order to Pictorem').item.json.pictorem_order_id }}\",\n  \"processing_time\": \"{{ $now }}\",\n  \"status\": \"submitted_to_production\"\n}",
+        "options": {}
+      },
+      "id": "ll2m3445-mn23-4o45-pq67-mn8p9p0q1l2m",
+      "name": "Return Fulfillment Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1700, 600]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "error_type",
+              "name": "error_type",
+              "value": "validation_failure",
+              "type": "string"
+            },
+            {
+              "id": "error_message",
+              "name": "error_message",
+              "value": "Order failed validation - payment not confirmed or already fulfilled",
+              "type": "string"
+            },
+            {
+              "id": "requires_manual_review",
+              "name": "requires_manual_review",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "mm3n4556-no34-4p56-qr78-no9q0q1r2m3n",
+      "name": "Handle Validation Failure",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [980, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/business-manager/fulfillment-error",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workflow_id",
+              "value": "order_fulfillment_error"
+            },
+            {
+              "name": "from_agent",
+              "value": "orders_fulfillment_agent"
+            },
+            {
+              "name": "to_agent",
+              "value": "business_manager_agent"
+            },
+            {
+              "name": "message_type",
+              "value": "escalation"
+            },
+            {
+              "name": "priority",
+              "value": "high"
+            },
+            {
+              "name": "business_context",
+              "value": {
+                "order_id": "={{ $('Process Order Input').item.json.order_id }}",\n                \"error_type\": \"={{ $json.error_type }}\",\n                \"error_details\": \"={{ $json.error_message }}\",\n                \"requires_manual_review\": \"={{ $json.requires_manual_review }}\"\n              }
+            },
+            {
+              "name": "correlation_id",
+              "value": "={{ $('Process Order Input').item.json.order_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "nn4o5667-op45-4q67-rs89-op0r1r2s3n4o",
+      "name": "Escalate Validation Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1220, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"error\": \"{{ $json.error_message }}\",\n  \"order_id\": \"{{ $('Process Order Input').item.json.order_id }}\",\n  \"requires_manual_review\": {{ $json.requires_manual_review }},\n  \"timestamp\": \"{{ $now }}\"\n}",
+        "options": {}
+      },
+      "id": "oo5p6778-pq56-4r78-st90-pq1s2s3t4o5p",
+      "name": "Return Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1460, 800]
+    }
+  ],
+  "connections": {
+    "Shopify Order Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Order Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Order Input": {
+      "main": [
+        [
+          {
+            "node": "Validate Order Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Order Status": {
+      "main": [
+        [
+          {
+            "node": "Retrieve Complete Order Data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Comprehensive Order Validation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Validation Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve Complete Order Data": {
+      "main": [
+        [
+          {
+            "node": "Assign Edition Numbers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprehensive Order Validation": {
+      "main": [
+        [
+          {
+            "node": "Calculate VividWalls Pricing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assign Edition Numbers": {
+      "main": [
+        [
+          {
+            "node": "Submit Order to Pictorem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate VividWalls Pricing": {
+      "main": [
+        [
+          {
+            "node": "Submit Order to Pictorem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Order to Pictorem": {
+      "main": [
+        [
+          {
+            "node": "Update Shopify Fulfillment",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Certificates of Authenticity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Shopify Fulfillment": {
+      "main": [
+        [
+          {
+            "node": "Notify Business Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Certificates of Authenticity": {
+      "main": [
+        [
+          {
+            "node": "Return Fulfillment Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Validation Failure": {
+      "main": [
+        [
+          {
+            "node": "Escalate Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalate Validation Error": {
+      "main": [
+        [
+          {
+            "node": "Return Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "versionId": "vividwalls-orders-fulfillment-v1.0",
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-30T10:00:00.000Z",
+      "updatedAt": "2025-01-30T10:00:00.000Z",
+      "id": "orders-fulfillment",
+      "name": "Orders Fulfillment"
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

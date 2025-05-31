@@ -1,0 +1,25 @@
+# Task ID: 6
+# Title: Implement Recommendation Engine Core
+# Status: pending
+# Dependencies: 3, 4, 5
+# Priority: high
+# Description: Develop the core matching algorithm for the recommendation engine
+# Details:
+Create an algorithm that matches customer room color palette with artwork attributes. Implement color harmony principles (complementary, analogous, triadic, etc.) based on the color theory knowledge base. Consider psychological compatibility between space and artwork. Design a scoring system that ranks recommendations based on color harmony score, psychological/emotional fit, and visual balance considerations.
+
+# Test Strategy:
+Test with various room color palettes and verify recommendations match expected color harmony principles. Validate scoring system produces consistent and appropriate rankings.
+
+# Subtasks:
+## 1. Implement color harmony scoring algorithm [pending]
+### Dependencies: None
+### Description: Create algorithm to score color harmony between room and artwork
+### Details:
+Create recommendation/color_harmony.py implementing complementary, analogous, triadic, and other color scheme scoring based on color-theory.md principles
+
+## 2. Create psychological compatibility scoring [pending]
+### Dependencies: None
+### Description: Implement scoring based on psychological effects of colors
+### Details:
+Create recommendation/psychological_analysis.py to analyze emotional and psychological compatibility between room colors and artwork, using color psychology principles from knowledge base
+

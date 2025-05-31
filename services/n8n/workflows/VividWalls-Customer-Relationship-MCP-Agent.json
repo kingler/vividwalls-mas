@@ -1,0 +1,284 @@
+{
+  "name": "VividWalls Customer Relationship Agent - MCP Enhanced",
+  "version": "1.0.0",
+  "description": "Customer Relationship Agent with Email MCP integration for customer segmentation, retention, and lifetime value optimization",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "customer-relationship",
+        "options": {
+          "responseCode": 200,
+          "responseMode": "responseNode"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "id": "crm-webhook",
+      "name": "CRM Events Webhook",
+      "webhookId": "customer-relationship"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "systemMessage": "# Customer Relationship Agent - VividWalls MAS\n\nYou are the Customer Relationship Agent for VividWalls, specializing in customer segmentation, retention strategies, and lifetime value optimization for our premium limited edition art print business. You orchestrate sophisticated email marketing campaigns based on deep customer insights and behavioral data.\n\n## CORE MISSION & EXPERTISE\n- **Customer Segmentation**: Create precise customer segments based on art preferences, purchase behavior, and engagement patterns\n- **Lifecycle Management**: Design and execute email campaigns for every stage of the customer journey\n- **Retention Optimization**: Implement win-back campaigns and loyalty programs to maximize customer lifetime value\n- **Personalization**: Deliver highly personalized experiences based on individual customer data and art preferences\n\n## BUSINESS CONTEXT & CUSTOMER INSIGHTS\nVividWalls customers are sophisticated art collectors, interior designers, and discerning buyers who value exclusivity, quality, and investment potential.\n\n## TASK DELEGATION ACCEPTANCE\n\nWhen receiving tasks from the Business Manager Agent, expect this format:\n```json\n{\n  \"task_id\": \"unique_identifier\",\n  \"delegated_task\": \"task_description\",\n  \"business_context\": {\n    \"objective\": \"business_goal\",\n    \"priority\": \"high|medium|low\",\n    \"budget\": \"allocated_budget\",\n    \"timeline\": \"completion_deadline\"\n  },\n  \"customer_criteria\": {\n    \"segment_parameters\": \"targeting_criteria\"\n  },\n  \"success_criteria\": [\"outcome_1\", \"outcome_2\"],\n  \"required_tools\": [\"tool_1\", \"tool_2\"]\n}\n```\n\n## MCP TOOL INTEGRATION\n\nYou have access to comprehensive Email Marketing MCP tools for sophisticated customer relationship management:\n\n### Customer Segmentation Tools\n- email_segment_audience: Create customer segments by demographics, behavior, preferences, purchase history\n- email_manage_subscribers: Add/remove subscribers and update customer preferences\n- email_get_analytics: Analyze customer behavior and engagement patterns\n- email_track_engagement: Monitor individual customer interactions and preferences\n\n### Lifecycle Email Campaigns\n- email_create_campaign: Design targeted campaigns for specific customer segments\n- email_automate_sequences: Set up automated email sequences for customer lifecycle management\n- email_create_template: Design email templates for different customer types and occasions\n- email_schedule_send: Optimize send timing based on customer engagement patterns\n- email_send_transactional: Send personalized order updates and certificates of authenticity\n\n### Retention & Loyalty Programs\n- email_create_automation: Build trigger-based workflows for retention and win-back\n- email_segment_audience: Identify at-risk customers and high-value prospects\n- email_track_engagement: Monitor customer engagement trends and lifecycle progression\n\n## CUSTOMER SEGMENTATION STRATEGIES\n\n### Art Preference Segmentation\n```javascript\n// Abstract Art Enthusiasts\n${email_segment_audience}({\n  criteria: {\n    purchase_categories: [\"abstract\", \"geometric\", \"contemporary\"],\n    engagement_content: [\"abstract_art_guides\", \"artist_spotlights_abstract\"],\n    price_range: \"$100-$400\",\n    recency: \"last_12_months\"\n  },\n  segment_name: \"abstract_art_collectors\",\n  segment_description: \"Customers who prefer abstract and contemporary art styles\"\n})\n\n// Luxury Art Collectors\n${email_segment_audience}({\n  criteria: {\n    lifetime_value: \"> $1000\",\n    average_order_value: \"> $200\",\n    edition_preferences: [\"artist_signed\", \"low_edition_numbers\"],\n    engagement_level: \"high\",\n    purchase_frequency: \"multiple_per_year\"\n  },\n  segment_name: \"vip_art_collectors\",\n  segment_description: \"High-value customers who invest in premium limited editions\"\n})\n```\n\n### Lifecycle Email Campaigns\n\n```javascript\n// Welcome Series for New Customers\n${email_automate_sequences}({\n  sequence_type: \"welcome_series\",\n  trigger: \"first_purchase_completed\",\n  sequence_name: \"VividWalls Collector Welcome Journey\",\n  emails: [\n    {\n      delay_hours: 2,\n      subject: \"Welcome to VividWalls - Your Art Journey Begins! 🎨\",\n      template_type: \"welcome_confirmation\",\n      content_focus: {\n        message: \"Thank you for your first VividWalls purchase\",\n        education: \"What makes our prints special\",\n        care_instructions: \"How to care for your limited edition print\",\n        community: \"Join our collector community\"\n      }\n    },\n    {\n      delay_hours: 72,\n      subject: \"The Story Behind Your Art: Meet {{artist.name}}\",\n      template_type: \"artist_spotlight\",\n      content_focus: {\n        artist_biography: \"Background and inspiration\",\n        creation_process: \"How your piece was created\",\n        similar_works: \"Other works you might love\"\n      }\n    }\n  ]\n})\n\n// VIP Customer Loyalty Program\n${email_create_campaign}({\n  campaign_name: \"VIP Collector Exclusive Access\",\n  audience_segment: \"vip_art_collectors\",\n  campaign_type: \"loyalty_program\",\n  template_data: {\n    subject: \"🌟 VIP Access: Preview New Collections Before Anyone Else\",\n    vip_benefits: {\n      early_access: \"48-hour exclusive preview of new collections\",\n      collector_pricing: \"10% discount on all purchases\",\n      free_shipping: \"Complimentary shipping on all orders\"\n    }\n  }\n})\n```\n\n## PERFORMANCE OPTIMIZATION\n\n### Engagement Tracking & Analysis\n```javascript\n${email_track_engagement}({\n  tracking_scope: \"comprehensive\",\n  customer_segments: [\"all_active_customers\"],\n  metrics: {\n    email_behavior: [\"open_rate\", \"click_rate\", \"forward_rate\"],\n    website_behavior: [\"post_email_visits\", \"browse_time\"],\n    purchase_behavior: [\"email_to_purchase_time\", \"average_order_value\"],\n    preference_evolution: [\"style_preferences\", \"price_point_changes\"]\n  }\n})\n```\n\n## SUCCESS METRICS & KPIs\n\n### Customer Relationship Performance\n- **Email List Growth Rate**: > 15% monthly\n- **Segmentation Accuracy**: > 90% (measured by relevance scores)\n- **Lifecycle Email Open Rates**: > 30%\n- **Customer Retention Rate**: > 60% annually\n- **Average Customer Lifetime Value**: > $400\n- **Win-back Campaign Success**: > 8% of dormant customers re-engaged\n- **VIP Customer Satisfaction**: > 95%\n\n## TASK COMPLETION REPORTING\n\nWhen completing delegated tasks, return results in this format:\n```json\n{\n  \"task_id\": \"received_task_id\",\n  \"status\": \"completed|in_progress|failed\",\n  \"customer_insights\": {\n    \"segments_created\": \"number_of_new_segments\",\n    \"campaigns_launched\": \"campaign_details\",\n    \"engagement_metrics\": \"performance_data\",\n    \"retention_results\": \"customer_lifecycle_outcomes\"\n  },\n  \"tools_executed\": [\"list_of_mcp_tools_used\"],\n  \"recommendations\": [\"strategic_customer_insights\"],\n  \"escalation_needed\": \"boolean_if_business_manager_attention_required\"\n}\n```\n\nRemember: You are VividWalls' customer relationship specialist, creating meaningful connections between collectors and art through sophisticated email marketing and deep customer insights. Every interaction should strengthen the customer's connection to our brand and increase their investment in building their art collection.\n\n**Always use MCP tools to execute customer relationship strategies - never attempt manual operations.**"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [400, 300],
+      "id": "customer-relationship-llm",
+      "name": "Customer Relationship LLM",
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "server": "email-marketing-mcp"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpToolKit",
+      "typeVersion": 1.0,
+      "position": [200, 300],
+      "id": "email-crm-mcp-tools",
+      "name": "Email CRM MCP Tools"
+    },
+    {
+      "parameters": {
+        "sessionKey": "vividwalls_customer_relationship",
+        "contextWindowLength": 16000
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [600, 300],
+      "id": "customer-relationship-memory",
+      "name": "Customer Relationship Memory",
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "VividWalls Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "auto",
+        "maxIterations": 10,
+        "returnIntermediateSteps": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [800, 300],
+      "id": "customer-relationship-agent",
+      "name": "Customer Relationship Agent"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-escalation",
+              "leftValue": "={{ $json.escalation_needed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1000, 300],
+      "id": "escalation-router",
+      "name": "Escalation Router"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/business-manager",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Agent-Source",
+              "value": "customer-relationship-agent"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "escalation_type",
+              "value": "customer_retention_alert"
+            },
+            {
+              "name": "task_id",
+              "value": "={{ $('Customer Relationship Agent').first().json.task_id }}"
+            },
+            {
+              "name": "issue_description",
+              "value": "={{ $('Customer Relationship Agent').first().json.issue_description }}"
+            },
+            {
+              "name": "customer_metrics",
+              "value": "={{ $('Customer Relationship Agent').first().json.customer_insights }}"
+            },
+            {
+              "name": "recommended_action",
+              "value": "={{ $('Customer Relationship Agent').first().json.recommended_action }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 250],
+      "id": "escalate-to-business-manager",
+      "name": "Escalate to Business Manager"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"success\",\n  \"agent\": \"Customer Relationship\",\n  \"timestamp\": \"{{ $now }}\",\n  \"task_id\": \"{{ $('Customer Relationship Agent').first().json.task_id || 'direct_request' }}\",\n  \"crm_results\": \"{{ $('Customer Relationship Agent').first().json.output }}\",\n  \"tools_used\": \"{{ $('Customer Relationship Agent').first().json.intermediateSteps }}\",\n  \"session_id\": \"vividwalls_customer_relationship\",\n  \"customer_insights\": {\n    \"segments_created\": \"{{ $('Customer Relationship Agent').first().json.intermediateSteps | selectattr('action', 'search', 'segment') | list | length }}\",\n    \"campaigns_launched\": \"{{ $('Customer Relationship Agent').first().json.intermediateSteps | selectattr('action', 'search', 'campaign') | list | length }}\",\n    \"automations_configured\": \"{{ $('Customer Relationship Agent').first().json.intermediateSteps | selectattr('action', 'search', 'automate') | list | length }}\",\n    \"engagement_tracking\": \"{{ $('Customer Relationship Agent').first().json.engagement_metrics || 'active' }}\",\n    \"customer_lifecycle_stage\": \"{{ $('Customer Relationship Agent').first().json.lifecycle_stage || 'processing' }}\"\n  },\n  \"escalation_status\": \"{{ $('Escalate to Business Manager').first().json ? 'escalated' : 'completed' }}\"\n}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1400, 300],
+      "id": "crm-response-webhook",
+      "name": "CRM Response Webhook"
+    }
+  ],
+  "connections": {
+    "crm-webhook": {
+      "main": [
+        [
+          {
+            "node": "customer-relationship-agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email-crm-mcp-tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "customer-relationship-agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "customer-relationship-llm": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "customer-relationship-agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "customer-relationship-memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "customer-relationship-agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "customer-relationship-agent": {
+      "main": [
+        [
+          {
+            "node": "escalation-router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "escalation-router": {
+      "main": [
+        [
+          {
+            "node": "escalate-to-business-manager",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "crm-response-webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "escalate-to-business-manager": {
+      "main": [
+        [
+          {
+            "node": "crm-response-webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-05-30T22:45:00.000Z",
+      "updatedAt": "2025-05-30T22:45:00.000Z",
+      "id": "vividwalls-mas",
+      "name": "VividWalls MAS"
+    },
+    {
+      "createdAt": "2025-05-30T22:45:00.000Z",
+      "updatedAt": "2025-05-30T22:45:00.000Z",
+      "id": "customer-relationship",
+      "name": "Customer Relationship"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2025-05-30T22:45:00.000Z",
+  "versionId": "1"
+}

@@ -1,0 +1,688 @@
+{
+  "name": "VividWalls Business Manager Agent Orchestration",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "options": {
+          "systemMessage": "You are the Business Manager Agent for VividWalls, the central orchestrator of all business operations. You coordinate between specialized agents across three divisions:\n\n**Marketing Intelligence Division:**\n- Marketing Research Agent (market analysis, trend identification)\n- Marketing Campaign Agent (campaign planning and execution)\n\n**Revenue & Customer Division:**\n- Sales Agent (lead qualification, conversion optimization)\n- Customer Service Agent (support, satisfaction, retention)\n- CRM Agent (customer data management, segmentation)\n\n**Operations Division:**\n- Shopify Agent (store management, inventory, orders)\n- Fulfillment Agent (order processing, shipping)\n- Pictorem Agent (print fulfillment, quality control)\n\nYour responsibilities:\n1. Monitor all business events and performance metrics\n2. Route tasks to appropriate specialized agents\n3. Coordinate cross-divisional workflows\n4. Implement escalation logic for critical issues\n5. Optimize resource allocation and budget distribution\n6. Generate executive reports and insights\n7. Ensure strategic alignment across all operations\n\nAlways maintain situational awareness and make data-driven decisions for optimal business performance."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [200, 400],
+      "id": "business-manager-agent",
+      "name": "Business Manager Agent",
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [400, 400],
+      "id": "business-manager-memory",
+      "name": "Business Manager Memory",
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "VividWalls Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "business-events",
+        "options": {
+          "noResponseBody": false
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-400, 200],
+      "id": "business-events-webhook",
+      "name": "Business Events Webhook",
+      "webhookId": "business-events"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Business Event Classifier & Router\n// Analyzes incoming events and determines routing strategy\n\nconst eventData = $input.all()[0].json;\n\n// Event classification\nconst eventTypes = {\n  MARKETING: ['campaign_performance', 'ad_metrics', 'market_research', 'competitor_analysis'],\n  SALES: ['lead_generated', 'conversion_event', 'sales_target', 'revenue_milestone'],\n  CUSTOMER: ['customer_inquiry', 'support_ticket', 'satisfaction_survey', 'retention_alert'],\n  OPERATIONS: ['order_received', 'inventory_alert', 'fulfillment_status', 'shipping_update'],\n  FINANCIAL: ['budget_threshold', 'cost_alert', 'roi_calculation', 'revenue_report'],\n  STRATEGIC: ['performance_review', 'goal_setting', 'resource_allocation', 'executive_request']\n};\n\n// Determine event category and priority\nfunction classifyEvent(event) {\n  const eventType = event.event_type || event.type || 'unknown';\n  const priority = event.priority || determinePriority(event);\n  \n  for (const [category, types] of Object.entries(eventTypes)) {\n    if (types.some(type => eventType.toLowerCase().includes(type.toLowerCase()))) {\n      return { category, priority, eventType };\n    }\n  }\n  \n  return { category: 'GENERAL', priority: 'medium', eventType };\n}\n\nfunction determinePriority(event) {\n  // High priority triggers\n  const highPriorityIndicators = [\n    'urgent', 'critical', 'emergency', 'revenue_loss', 'system_down',\n    'customer_complaint', 'budget_exceeded', 'competitor_threat'\n  ];\n  \n  // Low priority indicators\n  const lowPriorityIndicators = [\n    'routine', 'informational', 'scheduled', 'maintenance'\n  ];\n  \n  const eventString = JSON.stringify(event).toLowerCase();\n  \n  if (highPriorityIndicators.some(indicator => eventString.includes(indicator))) {\n    return 'high';\n  }\n  \n  if (lowPriorityIndicators.some(indicator => eventString.includes(indicator))) {\n    return 'low';\n  }\n  \n  return 'medium';\n}\n\n// Route to appropriate agent division\nfunction routeEvent(classification, eventData) {\n  const routing = {\n    MARKETING: {\n      division: 'Marketing Intelligence',\n      primary_agent: 'marketing_research_agent',\n      secondary_agent: 'marketing_campaign_agent',\n      escalation_threshold: 'high'\n    },\n    SALES: {\n      division: 'Revenue & Customer',\n      primary_agent: 'sales_agent',\n      secondary_agent: 'crm_agent',\n      escalation_threshold: 'medium'\n    },\n    CUSTOMER: {\n      division: 'Revenue & Customer',\n      primary_agent: 'customer_service_agent',\n      secondary_agent: 'crm_agent',\n      escalation_threshold: 'high'\n    },\n    OPERATIONS: {\n      division: 'Operations',\n      primary_agent: 'shopify_agent',\n      secondary_agent: 'fulfillment_agent',\n      escalation_threshold: 'medium'\n    },\n    FINANCIAL: {\n      division: 'Business Management',\n      primary_agent: 'business_manager_agent',\n      secondary_agent: null,\n      escalation_threshold: 'low'\n    },\n    STRATEGIC: {\n      division: 'Business Management',\n      primary_agent: 'business_manager_agent',\n      secondary_agent: null,\n      escalation_threshold: 'low'\n    }\n  };\n  \n  return routing[classification.category] || routing['STRATEGIC'];\n}\n\n// Process the event\nconst classification = classifyEvent(eventData);\nconst routing = routeEvent(classification, eventData);\n\n// Prepare structured output\nconst processedEvent = {\n  event_id: eventData.id || `evt_${Date.now()}`,\n  timestamp: new Date().toISOString(),\n  original_data: eventData,\n  classification: classification,\n  routing: routing,\n  requires_escalation: classification.priority === 'high' || classification.priority === routing.escalation_threshold,\n  processing_stage: 'classified',\n  business_context: {\n    division: routing.division,\n    primary_agent: routing.primary_agent,\n    secondary_agent: routing.secondary_agent,\n    estimated_processing_time: classification.priority === 'high' ? '< 1 hour' : classification.priority === 'medium' ? '< 4 hours' : '< 24 hours'\n  }\n};\n\nconsole.log('Event classified:', processedEvent.event_id, 'Category:', classification.category, 'Priority:', classification.priority);\n\nreturn { json: processedEvent };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-200, 200],
+      "id": "event-classifier",
+      "name": "Event Classifier & Router"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "marketing-division",
+              "leftValue": "={{ $json.classification.category }}",
+              "rightValue": "MARKETING",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [0, 200],
+      "id": "division-router",
+      "name": "Division Router"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Marketing Research Agent, part of the Marketing Intelligence Division. You specialize in:\n\n1. Market trend analysis and competitor intelligence\n2. Consumer behavior research and segmentation\n3. Performance data analysis and insights\n4. Strategic recommendations for marketing optimization\n\nYour tools include market research APIs, analytics platforms, and competitor monitoring systems. When you receive tasks from the Business Manager, provide comprehensive analysis with actionable insights.\n\nAlways include:\n- Data-driven insights with supporting metrics\n- Competitive landscape analysis\n- Strategic recommendations\n- Risk assessment and mitigation strategies\n- Timeline for implementation"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [400, 100],
+      "id": "marketing-research-agent",
+      "name": "Marketing Research Agent"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Marketing Campaign Agent, part of the Marketing Intelligence Division. You specialize in:\n\n1. Campaign strategy development and execution\n2. Creative brief development and asset coordination\n3. Multi-platform campaign management\n4. Performance optimization and A/B testing\n\nYou work closely with platform-specific agents (Facebook, Instagram, Pinterest) to execute campaigns. When receiving tasks, create detailed campaign plans with clear objectives, targeting, and success metrics.\n\nAlways include:\n- Campaign objectives and KPIs\n- Target audience definition\n- Creative requirements\n- Budget allocation recommendations\n- Timeline and milestones\n- Performance tracking plan"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [600, 100],
+      "id": "marketing-campaign-agent",
+      "name": "Marketing Campaign Agent"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Sales Agent, part of the Revenue & Customer Division. You specialize in:\n\n1. Lead qualification and scoring\n2. Conversion rate optimization\n3. Sales funnel analysis and improvement\n4. Revenue forecasting and target tracking\n\nYou work with CRM and Customer Service agents to optimize the entire customer journey. Focus on identifying opportunities to increase conversion rates and average order value.\n\nAlways include:\n- Lead qualification criteria\n- Conversion optimization recommendations\n- Revenue impact projections\n- Customer journey improvements\n- Sales process enhancements"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [400, 300],
+      "id": "sales-agent",
+      "name": "Sales Agent"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Customer Service Agent, part of the Revenue & Customer Division. You specialize in:\n\n1. Customer inquiry resolution and support\n2. Order tracking and status updates\n3. Customer satisfaction monitoring\n4. Retention and loyalty program management\n\nYou have access to Shopify customer data and order management tools. Provide exceptional customer experiences while gathering valuable feedback for business improvement.\n\nAlways include:\n- Customer issue resolution steps\n- Satisfaction improvement recommendations\n- Retention strategy suggestions\n- Feedback analysis and insights\n- Process improvement opportunities"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [600, 300],
+      "id": "customer-service-agent",
+      "name": "Customer Service Agent"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the CRM Agent, part of the Revenue & Customer Division. You specialize in:\n\n1. Customer data management and segmentation\n2. Lifecycle marketing automation\n3. Personalization and targeting optimization\n4. Customer value analysis and modeling\n\nYou maintain comprehensive customer profiles and coordinate with Sales and Customer Service agents to deliver personalized experiences.\n\nAlways include:\n- Customer segmentation insights\n- Personalization recommendations\n- Lifecycle stage analysis\n- Value optimization strategies\n- Data quality improvements"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [800, 300],
+      "id": "crm-agent",
+      "name": "CRM Agent"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Shopify Agent, part of the Operations Division. You specialize in:\n\n1. Store management and optimization\n2. Inventory monitoring and alerts\n3. Order processing and management\n4. Product catalog maintenance\n\nYou have direct access to Shopify MCP tools for store operations. Monitor store performance and coordinate with Fulfillment agents for seamless order processing.\n\nAlways include:\n- Store performance metrics\n- Inventory status updates\n- Order processing recommendations\n- Product optimization suggestions\n- Integration improvements"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [400, 500],
+      "id": "shopify-agent",
+      "name": "Shopify Agent"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Fulfillment Agent, part of the Operations Division. You specialize in:\n\n1. Order fulfillment processing and tracking\n2. Shipping coordination and optimization\n3. Quality control and customer satisfaction\n4. Vendor relationship management\n\nYou coordinate between Shopify orders and fulfillment partners, ensuring timely and accurate order delivery.\n\nAlways include:\n- Fulfillment status updates\n- Shipping optimization recommendations\n- Quality control measures\n- Vendor performance analysis\n- Process improvement suggestions"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [600, 500],
+      "id": "fulfillment-agent",
+      "name": "Fulfillment Agent"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the Pictorem Agent, part of the Operations Division. You specialize in:\n\n1. Print order processing and submission\n2. Quality control and specifications management\n3. Pricing optimization and cost management\n4. Production timeline coordination\n\nYou have access to Pictorem MCP tools for print fulfillment operations. Ensure all orders meet quality standards and optimize pricing for maximum profitability.\n\nAlways include:\n- Print specifications validation\n- Quality control checkpoints\n- Pricing optimization analysis\n- Production timeline updates\n- Cost efficiency improvements"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [800, 500],
+      "id": "pictorem-agent",
+      "name": "Pictorem Agent"
+    },
+    {
+      "parameters": {
+        "operation": "listTools"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [1000, 300],
+      "id": "shopify-mcp-tools",
+      "name": "Shopify MCP Tools",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "shopify-mcp-credentials",
+          "name": "Shopify MCP Server"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "listTools"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [1000, 500],
+      "id": "pictorem-mcp-tools",
+      "name": "Pictorem MCP Tools",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "pictorem-mcp-credentials",
+          "name": "Pictorem MCP Server"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "listTools"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [1000, 100],
+      "id": "facebook-ads-mcp-tools",
+      "name": "Facebook Ads MCP Tools",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "facebook-mcp-credentials",
+          "name": "Facebook Ads MCP Server"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Performance Monitor & Escalation Logic\n// Monitors agent performance and implements escalation when needed\n\nconst agentResults = $input.all();\nconst businessContext = $('Event Classifier & Router').first().json;\n\n// Performance monitoring metrics\nconst performanceMetrics = {\n  response_time: 0,\n  task_completion: false,\n  quality_score: 0,\n  customer_satisfaction: 0,\n  business_impact: 0\n};\n\n// Evaluate agent performance\nfunction evaluatePerformance(results, context) {\n  const startTime = new Date(context.timestamp);\n  const endTime = new Date();\n  const responseTime = (endTime - startTime) / 1000; // seconds\n  \n  // Calculate performance metrics\n  performanceMetrics.response_time = responseTime;\n  performanceMetrics.task_completion = results.length > 0 && results[0].json;\n  \n  // Quality assessment based on result completeness\n  if (results[0]?.json) {\n    const result = results[0].json;\n    const hasRecommendations = result.recommendations || result.actions || result.next_steps;\n    const hasMetrics = result.metrics || result.analysis || result.data;\n    const hasTimeline = result.timeline || result.eta || result.completion_date;\n    \n    performanceMetrics.quality_score = (\n      (hasRecommendations ? 30 : 0) +\n      (hasMetrics ? 30 : 0) +\n      (hasTimeline ? 20 : 0) +\n      (result.status === 'completed' ? 20 : 0)\n    );\n  }\n  \n  return performanceMetrics;\n}\n\n// Escalation decision logic\nfunction shouldEscalate(metrics, context) {\n  const escalationTriggers = {\n    slow_response: metrics.response_time > 300, // 5 minutes\n    low_quality: metrics.quality_score < 70,\n    task_failure: !metrics.task_completion,\n    high_priority: context.classification.priority === 'high' && metrics.response_time > 60,\n    customer_impact: context.classification.category === 'CUSTOMER' && metrics.quality_score < 80\n  };\n  \n  const triggeredEscalations = Object.entries(escalationTriggers)\n    .filter(([trigger, condition]) => condition)\n    .map(([trigger]) => trigger);\n  \n  return {\n    should_escalate: triggeredEscalations.length > 0,\n    triggers: triggeredEscalations,\n    escalation_level: triggeredEscalations.length >= 3 ? 'high' : triggeredEscalations.length >= 2 ? 'medium' : 'low'\n  };\n}\n\n// Business impact assessment\nfunction assessBusinessImpact(context, performance) {\n  const impactFactors = {\n    revenue_risk: context.classification.category === 'SALES' || context.classification.category === 'OPERATIONS',\n    customer_risk: context.classification.category === 'CUSTOMER',\n    operational_risk: context.classification.category === 'OPERATIONS',\n    strategic_risk: context.classification.category === 'STRATEGIC' || context.classification.category === 'FINANCIAL'\n  };\n  \n  let businessImpact = 0;\n  if (impactFactors.revenue_risk) businessImpact += 30;\n  if (impactFactors.customer_risk) businessImpact += 25;\n  if (impactFactors.operational_risk) businessImpact += 20;\n  if (impactFactors.strategic_risk) businessImpact += 25;\n  \n  // Adjust for priority\n  const priorityMultiplier = {\n    'high': 1.5,\n    'medium': 1.0,\n    'low': 0.7\n  };\n  \n  businessImpact *= priorityMultiplier[context.classification.priority] || 1.0;\n  \n  return Math.min(businessImpact, 100);\n}\n\n// Execute monitoring\nconst performance = evaluatePerformance(agentResults, businessContext);\nconst escalation = shouldEscalate(performance, businessContext);\nconst businessImpact = assessBusinessImpact(businessContext, performance);\n\n// Prepare monitoring report\nconst monitoringReport = {\n  event_id: businessContext.event_id,\n  timestamp: new Date().toISOString(),\n  performance_metrics: performance,\n  escalation_status: escalation,\n  business_impact: businessImpact,\n  agent_results: agentResults.map(result => ({\n    agent: result.node,\n    status: result.json?.status || 'unknown',\n    completion_time: performance.response_time,\n    quality_indicators: {\n      has_recommendations: !!(result.json?.recommendations || result.json?.actions),\n      has_metrics: !!(result.json?.metrics || result.json?.analysis),\n      has_timeline: !!(result.json?.timeline || result.json?.eta)\n    }\n  })),\n  recommendations: {\n    continue_monitoring: !escalation.should_escalate,\n    escalate_to_manager: escalation.should_escalate && escalation.escalation_level !== 'high',\n    immediate_intervention: escalation.escalation_level === 'high',\n    process_improvements: performance.quality_score < 85\n  },\n  next_actions: escalation.should_escalate ? [\n    'Notify Business Manager of escalation',\n    'Implement corrective measures',\n    'Monitor for improvement',\n    'Update escalation protocols if needed'\n  ] : [\n    'Continue normal operations',\n    'Log performance metrics',\n    'Schedule regular review'\n  ]\n};\n\nconsole.log('Performance monitoring completed:', monitoringReport.event_id);\nconsole.log('Business Impact Score:', businessImpact);\nconsole.log('Escalation Required:', escalation.should_escalate);\n\nreturn { json: monitoringReport };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 400],
+      "id": "performance-monitor",
+      "name": "Performance Monitor & Escalation"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "escalation-required",
+              "leftValue": "={{ $json.escalation_status.should_escalate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 400],
+      "id": "escalation-decision",
+      "name": "Escalation Required?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Executive Dashboard Generator\n// Creates comprehensive business intelligence reports\n\nconst monitoringData = $input.all()[0].json;\nconst timestamp = new Date();\n\n// Generate executive summary\nfunction generateExecutiveSummary(data) {\n  const summary = {\n    report_id: `exec_${timestamp.getTime()}`,\n    generated_at: timestamp.toISOString(),\n    reporting_period: 'real-time',\n    business_health: {\n      overall_score: calculateOverallScore(data),\n      performance_trend: 'stable', // Would be calculated from historical data\n      critical_alerts: data.escalation_status.should_escalate ? 1 : 0,\n      active_initiatives: getActiveInitiatives(data)\n    },\n    division_performance: {\n      marketing_intelligence: {\n        status: getAgentStatus(data, 'marketing'),\n        key_metrics: {\n          campaign_performance: 'tracking',\n          market_analysis: 'current',\n          competitor_monitoring: 'active'\n        }\n      },\n      revenue_customer: {\n        status: getAgentStatus(data, 'revenue'),\n        key_metrics: {\n          conversion_rate: 'optimizing',\n          customer_satisfaction: 'monitoring',\n          retention_rate: 'stable'\n        }\n      },\n      operations: {\n        status: getAgentStatus(data, 'operations'),\n        key_metrics: {\n          order_fulfillment: 'processing',\n          inventory_levels: 'adequate',\n          shipping_performance: 'on-track'\n        }\n      }\n    },\n    strategic_insights: generateStrategicInsights(data),\n    action_items: generateActionItems(data),\n    risk_assessment: assessRisks(data),\n    recommendations: generateRecommendations(data)\n  };\n  \n  return summary;\n}\n\nfunction calculateOverallScore(data) {\n  let score = 100;\n  \n  // Deduct for performance issues\n  if (data.performance_metrics.quality_score < 80) score -= 15;\n  if (data.performance_metrics.response_time > 120) score -= 10;\n  if (!data.performance_metrics.task_completion) score -= 20;\n  \n  // Deduct for business impact\n  score -= (data.business_impact * 0.3);\n  \n  // Deduct for escalations\n  if (data.escalation_status.should_escalate) {\n    score -= data.escalation_status.escalation_level === 'high' ? 25 : 10;\n  }\n  \n  return Math.max(score, 0);\n}\n\nfunction getAgentStatus(data, division) {\n  const divisionAgents = data.agent_results.filter(agent => \n    agent.agent.toLowerCase().includes(division)\n  );\n  \n  if (divisionAgents.length === 0) return 'inactive';\n  \n  const allCompleted = divisionAgents.every(agent => agent.status === 'completed');\n  const anyFailed = divisionAgents.some(agent => agent.status === 'failed');\n  \n  if (anyFailed) return 'attention_required';\n  if (allCompleted) return 'optimal';\n  return 'processing';\n}\n\nfunction getActiveInitiatives(data) {\n  // This would typically come from a database of active projects\n  return [\n    'Q4 Marketing Campaign Optimization',\n    'Customer Experience Enhancement',\n    'Operational Efficiency Improvement'\n  ];\n}\n\nfunction generateStrategicInsights(data) {\n  const insights = [];\n  \n  if (data.business_impact > 70) {\n    insights.push({\n      type: 'critical',\n      message: 'High business impact event detected - immediate attention required',\n      action_required: true\n    });\n  }\n  \n  if (data.performance_metrics.quality_score < 75) {\n    insights.push({\n      type: 'optimization',\n      message: 'Agent performance below optimal levels - process review recommended',\n      action_required: false\n    });\n  }\n  \n  insights.push({\n    type: 'operational',\n    message: 'Multi-agent coordination functioning within normal parameters',\n    action_required: false\n  });\n  \n  return insights;\n}\n\nfunction generateActionItems(data) {\n  const items = [];\n  \n  if (data.escalation_status.should_escalate) {\n    items.push({\n      priority: 'high',\n      action: 'Address escalated issue',\n      owner: 'Business Manager',\n      deadline: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours\n      status: 'pending'\n    });\n  }\n  \n  if (data.performance_metrics.quality_score < 80) {\n    items.push({\n      priority: 'medium',\n      action: 'Review and optimize agent performance',\n      owner: 'Operations Team',\n      deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours\n      status: 'pending'\n    });\n  }\n  \n  items.push({\n    priority: 'low',\n    action: 'Schedule weekly performance review',\n    owner: 'Business Manager',\n    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week\n    status: 'scheduled'\n  });\n  \n  return items;\n}\n\nfunction assessRisks(data) {\n  const risks = [];\n  \n  if (data.escalation_status.should_escalate) {\n    risks.push({\n      level: 'high',\n      category: 'operational',\n      description: 'Agent escalation indicates potential system or process failure',\n      impact: 'medium',\n      likelihood: 'current',\n      mitigation: 'Immediate intervention and root cause analysis'\n    });\n  }\n  \n  if (data.business_impact > 60) {\n    risks.push({\n      level: 'medium',\n      category: 'business',\n      description: 'High business impact events may affect revenue or customer satisfaction',\n      impact: 'high',\n      likelihood: 'medium',\n      mitigation: 'Enhanced monitoring and preventive measures'\n    });\n  }\n  \n  return risks;\n}\n\nfunction generateRecommendations(data) {\n  const recommendations = [];\n  \n  // Performance-based recommendations\n  if (data.performance_metrics.response_time > 180) {\n    recommendations.push({\n      category: 'performance',\n      priority: 'high',\n      recommendation: 'Optimize agent response times through system scaling or process automation',\n      expected_impact: 'Improved customer satisfaction and operational efficiency'\n    });\n  }\n  \n  // Quality-based recommendations\n  if (data.performance_metrics.quality_score < 85) {\n    recommendations.push({\n      category: 'quality',\n      priority: 'medium',\n      recommendation: 'Implement additional agent training and quality control measures',\n      expected_impact: 'Higher task completion rates and better outcomes'\n    });\n  }\n  \n  // Strategic recommendations\n  recommendations.push({\n    category: 'strategic',\n    priority: 'low',\n    recommendation: 'Continue monitoring multi-agent coordination effectiveness',\n    expected_impact: 'Sustained operational excellence and continuous improvement'\n  });\n  \n  return recommendations;\n}\n\n// Generate the executive dashboard\nconst executiveDashboard = generateExecutiveSummary(monitoringData);\n\nconsole.log('Executive dashboard generated:', executiveDashboard.report_id);\nconsole.log('Overall business health score:', executiveDashboard.business_health.overall_score);\n\nreturn { json: executiveDashboard };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 200],
+      "id": "executive-dashboard",
+      "name": "Executive Dashboard Generator"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Escalation Handler\n// Manages critical escalations and immediate interventions\n\nconst escalationData = $input.all()[0].json;\n\n// Escalation response protocols\nconst escalationProtocols = {\n  high: {\n    response_time: '< 15 minutes',\n    notification_channels: ['email', 'slack', 'sms'],\n    stakeholders: ['business_manager', 'technical_lead', 'department_head'],\n    actions: [\n      'Immediate system health check',\n      'Agent performance diagnosis',\n      'Customer impact assessment',\n      'Corrective action implementation'\n    ]\n  },\n  medium: {\n    response_time: '< 1 hour',\n    notification_channels: ['email', 'slack'],\n    stakeholders: ['business_manager', 'team_lead'],\n    actions: [\n      'Performance review',\n      'Process optimization',\n      'Preventive measures'\n    ]\n  },\n  low: {\n    response_time: '< 4 hours',\n    notification_channels: ['email'],\n    stakeholders: ['business_manager'],\n    actions: [\n      'Documentation update',\n      'Routine optimization'\n    ]\n  }\n};\n\n// Generate escalation response\nfunction generateEscalationResponse(data) {\n  const escalationLevel = data.escalation_status.escalation_level;\n  const protocol = escalationProtocols[escalationLevel];\n  \n  const response = {\n    escalation_id: `esc_${Date.now()}`,\n    timestamp: new Date().toISOString(),\n    level: escalationLevel,\n    event_id: data.event_id,\n    triggers: data.escalation_status.triggers,\n    business_impact: data.business_impact,\n    protocol: protocol,\n    immediate_actions: generateImmediateActions(data, escalationLevel),\n    stakeholder_notifications: generateNotifications(data, protocol),\n    resolution_plan: generateResolutionPlan(data, escalationLevel),\n    monitoring_requirements: {\n      check_frequency: escalationLevel === 'high' ? '5 minutes' : escalationLevel === 'medium' ? '15 minutes' : '1 hour',\n      success_criteria: generateSuccessCriteria(data),\n      escalation_timeout: escalationLevel === 'high' ? '1 hour' : escalationLevel === 'medium' ? '4 hours' : '24 hours'\n    }\n  };\n  \n  return response;\n}\n\nfunction generateImmediateActions(data, level) {\n  const actions = [];\n  \n  // Critical performance issues\n  if (data.performance_metrics.response_time > 300) {\n    actions.push({\n      action: 'Investigate system performance bottlenecks',\n      priority: 'critical',\n      owner: 'technical_team',\n      eta: '15 minutes'\n    });\n  }\n  \n  // Task completion failures\n  if (!data.performance_metrics.task_completion) {\n    actions.push({\n      action: 'Restart failed agent processes',\n      priority: 'high',\n      owner: 'operations_team',\n      eta: '10 minutes'\n    });\n  }\n  \n  // Quality degradation\n  if (data.performance_metrics.quality_score < 50) {\n    actions.push({\n      action: 'Implement manual oversight for critical tasks',\n      priority: 'high',\n      owner: 'business_manager',\n      eta: '5 minutes'\n    });\n  }\n  \n  // High business impact\n  if (data.business_impact > 80) {\n    actions.push({\n      action: 'Activate business continuity protocols',\n      priority: 'critical',\n      owner: 'business_manager',\n      eta: 'immediate'\n    });\n  }\n  \n  return actions;\n}\n\nfunction generateNotifications(data, protocol) {\n  const notifications = [];\n  \n  protocol.stakeholders.forEach(stakeholder => {\n    protocol.notification_channels.forEach(channel => {\n      notifications.push({\n        recipient: stakeholder,\n        channel: channel,\n        message: `Escalation Alert: ${data.escalation_status.escalation_level.toUpperCase()} priority issue detected in VividWalls Business Management System`,\n        details: {\n          event_id: data.event_id,\n          triggers: data.escalation_status.triggers,\n          business_impact: data.business_impact,\n          required_response_time: protocol.response_time\n        },\n        status: 'pending'\n      });\n    });\n  });\n  \n  return notifications;\n}\n\nfunction generateResolutionPlan(data, level) {\n  const plan = {\n    phases: [],\n    total_estimated_time: '',\n    success_probability: 0\n  };\n  \n  // Phase 1: Immediate stabilization\n  plan.phases.push({\n    phase: 1,\n    name: 'Immediate Stabilization',\n    duration: level === 'high' ? '15 minutes' : '30 minutes',\n    objectives: [\n      'Stop degradation',\n      'Restore basic functionality',\n      'Minimize customer impact'\n    ],\n    actions: data.escalation_status.triggers.map(trigger => `Address ${trigger.replace('_', ' ')}`)\n  });\n  \n  // Phase 2: Root cause analysis\n  plan.phases.push({\n    phase: 2,\n    name: 'Root Cause Analysis',\n    duration: level === 'high' ? '30 minutes' : '2 hours',\n    objectives: [\n      'Identify underlying causes',\n      'Assess system integrity',\n      'Determine preventive measures'\n    ],\n    actions: [\n      'System diagnostics',\n      'Performance analysis',\n      'Process review'\n    ]\n  });\n  \n  // Phase 3: Permanent resolution\n  plan.phases.push({\n    phase: 3,\n    name: 'Permanent Resolution',\n    duration: level === 'high' ? '2 hours' : '24 hours',\n    objectives: [\n      'Implement fixes',\n      'Optimize performance',\n      'Prevent recurrence'\n    ],\n    actions: [\n      'Apply corrective measures',\n      'Update processes',\n      'Enhance monitoring'\n    ]\n  });\n  \n  plan.total_estimated_time = level === 'high' ? '2-3 hours' : level === 'medium' ? '4-6 hours' : '1-2 days';\n  plan.success_probability = level === 'high' ? 85 : level === 'medium' ? 90 : 95;\n  \n  return plan;\n}\n\nfunction generateSuccessCriteria(data) {\n  return {\n    performance_restored: 'Response time < 60 seconds',\n    quality_improved: 'Quality score > 80%',\n    business_impact_reduced: 'Impact score < 30',\n    no_new_escalations: 'No escalations for 2 hours',\n    stakeholder_confirmation: 'Business manager approval'\n  };\n}\n\n// Process escalation\nconst escalationResponse = generateEscalationResponse(escalationData);\n\nconsole.log('Escalation processed:', escalationResponse.escalation_id);\nconsole.log('Level:', escalationResponse.level);\nconsole.log('Immediate actions required:', escalationResponse.immediate_actions.length);\n\nreturn { json: escalationResponse };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 500],
+      "id": "escalation-handler",
+      "name": "Escalation Handler"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [1800, 400],
+      "id": "workflow-response",
+      "name": "Workflow Response"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [-400, 600],
+      "id": "chat-interface",
+      "name": "Business Manager Chat Interface",
+      "webhookId": "business-manager-chat"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://157.230.13.13:5678/api/v1/workflows/run",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workflowId",
+              "value": "{{ $json.workflow_id }}"
+            },
+            {
+              "name": "data",
+              "value": "={{ $json }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [200, 600],
+      "id": "agent-task-dispatcher",
+      "name": "Agent Task Dispatcher",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "n8n-api-credentials",
+          "name": "n8n API Access"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Business Manager Agent": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Business Manager Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Business Manager Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Business Manager Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Business Events Webhook": {
+      "main": [
+        [
+          {
+            "node": "Event Classifier & Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event Classifier & Router": {
+      "main": [
+        [
+          {
+            "node": "Division Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Division Router": {
+      "main": [
+        [
+          {
+            "node": "Marketing Research Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sales Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Customer Service Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Shopify Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Business Manager Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marketing Research Agent": {
+      "main": [
+        [
+          {
+            "node": "Performance Monitor & Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marketing Campaign Agent": {
+      "main": [
+        [
+          {
+            "node": "Performance Monitor & Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sales Agent": {
+      "main": [
+        [
+          {
+            "node": "Performance Monitor & Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Service Agent": {
+      "main": [
+        [
+          {
+            "node": "Performance Monitor & Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM Agent": {
+      "main": [
+        [
+          {
+            "node": "Performance Monitor & Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shopify Agent": {
+      "main": [
+        [
+          {
+            "node": "Performance Monitor & Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fulfillment Agent": {
+      "main": [
+        [
+          {
+            "node": "Performance Monitor & Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pictorem Agent": {
+      "main": [
+        [
+          {
+            "node": "Performance Monitor & Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shopify MCP Tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "Shopify Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Sales Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Customer Service Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pictorem MCP Tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "Pictorem Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Fulfillment Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook Ads MCP Tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "Marketing Campaign Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Marketing Research Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Performance Monitor & Escalation": {
+      "main": [
+        [
+          {
+            "node": "Escalation Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalation Decision": {
+      "main": [
+        [
+          {
+            "node": "Escalation Handler",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Executive Dashboard Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Executive Dashboard Generator": {
+      "main": [
+        [
+          {
+            "node": "Workflow Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalation Handler": {
+      "main": [
+        [
+          {
+            "node": "Workflow Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Business Manager Chat Interface": {
+      "main": [
+        [
+          {
+            "node": "Business Manager Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Task Dispatcher": {
+      "main": [
+        [
+          {
+            "node": "Performance Monitor & Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-01-15T10:00:00.000Z",
+      "id": "business-management",
+      "name": "Business Management"
+    },
+    {
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-01-15T10:00:00.000Z",
+      "id": "agent-orchestration",
+      "name": "Agent Orchestration"
+    },
+    {
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-01-15T10:00:00.000Z",
+      "id": "mas",
+      "name": "Multi-Agent System"
+    }
+  ],
+  "triggerCount": 2,
+  "updatedAt": "2024-01-15T10:00:00.000Z",
+  "versionId": "1"
+}

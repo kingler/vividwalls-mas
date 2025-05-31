@@ -1,0 +1,106 @@
+# Environment variables
+.env*
+!.env.example
+!.env.mcp.example
+!.env.shopify.example
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Node modules
+node_modules/
+package-lock.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+venv/
+env/
+ENV/
+*.venv
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cursor/mcp.json
+*.sublime-project
+*.sublime-workspace
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Data files
+data/shared/*.csv
+!data/shared/example-*.csv
+data/exports/
+data/configs/local/
+
+# Backup and temporary files
+*.bak
+*.tmp
+*.temp
+temp/
+tmp/
+archive/
+backups/
+
+# Docker volumes
+n8n_data/
+postgres_data/
+flowise_data/
+
+# Secrets and sensitive config
+config/env/
+*.pem
+*.key
+*.cert
+env.optimized
+
+# Test coverage
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Production artifacts
+dist/
+build/
+
+# Uploaded files
+uploads/
+media/
+
+# Cache directories
+.cache/
+cache/

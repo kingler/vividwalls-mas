@@ -1,0 +1,163 @@
+# SEO Research MCP Server - Product Requirements Document
+
+## 1. Project Overview
+
+**Product Name:** SEO Research MCP Server
+**Version:** 0.1.0
+**Project Type:** Backend MCP Server
+**Target Users:** AI agents, LLM-powered marketing automation tools, SEO engineers
+
+## 2. Objective
+
+Develop a backend-only MCP (Model Context Protocol) server that aggregates and exposes advanced keyword research, web scraping, backlink analysis, and SERP data from multiple sources for AI agents to orchestrate content marketing strategies and campaign development.
+
+## 3. Core Features
+
+### A. Keyword Research & Analysis
+- Multi-source keyword registration, lookup, and clustering
+- Fetch keyword metrics: search volume, CPC, competition, trends
+- SERP snapshot and competitor analysis
+- Semantic clustering/grouping via LLM or RAG
+- Long-tail keyword generation for specific domains
+
+### B. Backlink Analysis
+- Retrieve backlink profiles for domains/URLs via DataForSEO
+- Aggregate referring domains, anchor text, link type, authority
+- Bulk backlink queries and analytics
+- Backlink opportunity identification
+
+### C. Web Scraping & Content Extraction
+- Crawl and extract content from arbitrary URLs
+- Smart extraction: LLM-based or selector-based
+- Store and index crawled content for RAG and further analysis
+- Content gap analysis
+
+### D. Search Aggregation
+- Query web search results from multiple sources for real-time context
+- Support for recency, domain filtering, and content extraction
+- News search and trend analysis
+- Competitor discovery and analysis
+
+### E. Unified MCP API for AI Agents
+- Expose all tools via MCP-compliant endpoints
+- Standardized JSON schemas and tool definitions
+- Session/context management for multi-step workflows
+- Caching for cost optimization
+
+## 4. Integrated Data Sources
+
+### Primary Sources:
+- **DataForSEO API:** Keyword metrics, SERP data, backlink analysis, domain analytics
+- **Crawl4AI:** Web crawling, content extraction, RAG capabilities
+- **Brave Search API:** Web search, news, image/video search
+- **Perplexity API:** Web search with recency filters
+- **Tavily API:** Real-time web search, domain-specific search
+- **SerpAPI:** Google/Bing/Yahoo search data extraction
+
+## 5. Technical Architecture
+
+### MCP Tools to Implement:
+1. `keyword_research` - Multi-source keyword discovery and metrics
+2. `keyword_clustering` - Semantic grouping of keywords
+3. `backlink_analysis` - Domain/URL backlink profile analysis
+4. `competitor_analysis` - Identify and analyze competitors
+5. `content_extraction` - Scrape and extract content from URLs
+6. `serp_analysis` - SERP snapshot and ranking analysis
+7. `trend_analysis` - Market trends and news analysis
+8. `long_tail_generator` - Generate long-tail keywords for domains
+
+### Technical Requirements:
+- MCP Protocol compliance for agent compatibility
+- Docker containerization for modularity
+- API key management for all integrated services
+- Caching layer to minimize API costs
+- Comprehensive error handling and logging
+- Rate limiting and quota management
+
+## 6. API Endpoints/Tools Schema
+
+| Tool Name | Description | Primary Sources |
+|-----------|-------------|----------------|
+| `keyword_research` | Register/search keywords with metrics | DataForSEO, SerpAPI, Tavily |
+| `keyword_clustering` | Semantic keyword grouping | Crawl4AI, LLM |
+| `backlink_analysis` | Backlink profile analysis | DataForSEO |
+| `competitor_analysis` | Top competitors for keyword/domain | DataForSEO, SerpAPI, Tavily |
+| `content_extraction` | Scrape/extract content from URLs | Crawl4AI, Tavily |
+| `serp_analysis` | SERP snapshot for keywords | DataForSEO, SerpAPI |
+| `trend_analysis` | Historical and trending data | DataForSEO, Brave, Tavily |
+| `long_tail_generator` | Generate long-tail keywords | Multiple sources + LLM |
+
+## 7. Example AI Agent Workflow
+
+1. **Keyword Discovery:** Agent calls keyword_research to build seed list
+2. **SERP & Competitor Analysis:** Agent analyzes ranking pages and competitors
+3. **Backlink Audit:** Agent identifies backlink opportunities and gaps
+4. **Content Gap Analysis:** Agent extracts content for RAG and topic modeling
+5. **Market Trends:** Agent gathers fresh market and trend data
+6. **Long-tail Generation:** Agent generates targeted long-tail keywords
+
+## 8. Configuration Requirements
+
+### Environment Variables:
+- DATAFORSEO_API_KEY
+- BRAVE_API_KEY
+- PERPLEXITY_API_KEY
+- TAVILY_API_KEY
+- SERPAPI_KEY
+- OPENAI_API_KEY (for LLM processing)
+
+### Optional Integrations:
+- Local Falcon API (for local SEO)
+- Additional search engines
+- Custom crawling endpoints
+
+## 9. Success Criteria
+
+- AI agents can orchestrate multi-source SEO research via unified MCP interface
+- All major SEO research flows are supported and functional
+- System is modular, extensible, and maintainable
+- Cost-effective API usage through intelligent caching
+- Comprehensive error handling and monitoring
+
+## 10. Deliverables
+
+### Phase 1: Core Infrastructure
+- MCP server setup with basic tool definitions
+- DataForSEO integration for keyword and backlink data
+- Basic caching and error handling
+
+### Phase 2: Multi-Source Integration
+- Integrate Crawl4AI, Brave, Perplexity, Tavily, SerpAPI
+- Implement content extraction and analysis tools
+- Add competitor and SERP analysis capabilities
+
+### Phase 3: Advanced Features
+- Semantic keyword clustering
+- Long-tail keyword generation
+- Advanced analytics and reporting
+- Performance optimization
+
+### Phase 4: Production Readiness
+- Comprehensive testing and validation
+- Documentation and deployment guides
+- Monitoring and alerting setup
+- Security hardening
+
+## 11. Technical Constraints
+
+- Backend-only (no frontend/UI)
+- MCP protocol compliance required
+- Docker containerization preferred
+- API rate limiting compliance
+- Cost optimization through caching
+- Secure credential management
+
+## 12. Out of Scope for MVP
+
+- Custom web crawling beyond Crawl4AI
+- User management or authentication
+- Real-time streaming capabilities
+- Custom machine learning models
+- Manual data enrichment features
+
+This SEO Research MCP Server will provide AI agents with comprehensive, multi-source SEO intelligence through a unified, standards-compliant interface, enabling sophisticated content marketing and SEO automation workflows. 

@@ -1,0 +1,93 @@
+# MCP Server Routes for VividWalls
+# This file configures reverse proxy routes for all MCP servers
+
+# Creative Services
+handle_path /mcp/color-psychology* {
+    reverse_proxy localhost:8001 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# Analytics Services
+handle_path /mcp/kpi-dashboard* {
+    reverse_proxy localhost:8002 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# Research Services
+handle_path /mcp/tavily-research* {
+    reverse_proxy localhost:8003 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+handle_path /mcp/seo-research* {
+    reverse_proxy localhost:8004 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# Social Media Services
+handle_path /mcp/facebook-ads* {
+    reverse_proxy localhost:8005 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+handle_path /mcp/pinterest* {
+    reverse_proxy localhost:8006 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# Core Business Services
+handle_path /mcp/shopify* {
+    reverse_proxy localhost:8007 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+handle_path /mcp/wordpress* {
+    reverse_proxy localhost:8008 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+handle_path /mcp/email-marketing* {
+    reverse_proxy localhost:8009 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# Health check endpoint for all MCP services
+handle /mcp/health {
+    respond "MCP Services Health Check Endpoint" 200
+} 
