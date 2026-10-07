@@ -6,7 +6,7 @@ with a proven funnel to scale from.
 ## Phase 0 — Stop the leaks (Week 1)
 | # | Action | Owner | Why |
 |---|---|---|---|
-| 0.1 | Change Pictorem password; revoke DigitalOcean SSH key; rotate n8n/Supabase keys; shut down droplet `157.230.13.13` if unused | Owner | These were exposed in the public `vividwalls-mas` repo |
+| 0.1 | Change Pictorem password (and anywhere it was reused); make the `vividwalls-mas` and `vivid_mas` repos private | Owner | The password was exposed in the public repo. DigitalOcean and n8n are retired, so their keys are moot once those accounts are closed |
 | 0.2 | Place a real $1 test order end-to-end (live payment, real address) and fix what breaks | Owner + Claude | 15 visitors reached checkout and **0** finished — checkout is likely broken (payment provider, shipping rates for oversized canvas, or theme bug) |
 | 0.3 | Cancel stale test orders #1001–#1008 so analytics are clean | Claude (with approval) | |
 | 0.4 | Confirm Pictorem shipping costs by size; set shipping policy (free over $X?) | Owner | Margin clarity |

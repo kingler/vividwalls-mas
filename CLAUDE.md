@@ -5,7 +5,7 @@ business. Claude acts as the operator for three pillars: **business development,
 operations, and growth**. Read the files in `business/` before acting on anything
 customer-, price-, or brand-related.
 
-> The old n8n / Docker / DigitalOcean multi-agent stack is **retired**. Everything outside
+> The old n8n / Docker / DigitalOcean multi-agent stack is **retired** (DigitalOcean account no longer in use). Everything outside
 > `CLAUDE.md`, `business/`, `ops/` and `.claude/skills/` is legacy reference material —
 > do not run, deploy, or extend it.
 
