@@ -16,7 +16,7 @@ NC='\033[0m'
 DB_HOST="localhost"
 DB_PORT="54322"
 DB_USER="postgres"
-DB_PASSWORD="postgres"
+DB_PASSWORD="${DB_PASSWORD:?set DB_PASSWORD}"
 DB_NAME="postgres"
 
 echo -e "${BLUE}📥 VividWalls CSV Data Import Starting...${NC}"

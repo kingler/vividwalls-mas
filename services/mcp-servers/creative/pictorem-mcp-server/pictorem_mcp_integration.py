@@ -108,7 +108,7 @@ class PictoremMCPTool:
         self.base_url = "https://www.pictorem.com"
         self.login_credentials = {
             "username": "kingler@me.com",
-            "password": "#Freedom2023#"
+            "password": "REDACTED_SET_PICTOREM_PASSWORD_ENV"
         }
         
         # Form element selectors based on analysis

@@ -15,9 +15,9 @@ config();
 
 // Configuration
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'REDACTED_JWT';
 const N8N_WEBHOOK_URL = 'http://157.230.13.13:5678/api/v1';
-const N8N_API_KEY = process.env.N8N_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlNmJmMTU1Mi1kZWQ0LTQ2ZWMtOWU0ZS0xN2FhY2EyOGFmNzgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzQ4NTIxMTc3fQ.xpycas0XN_532GZR-SyH1B296pSNqvVVuNa80YYFKF0';
+const N8N_API_KEY = process.env.N8N_API_KEY || 'REDACTED_JWT';
 
 // Shopify credentials
 const SHOPIFY_DOMAIN = process.env.MYSHOPIFY_DOMAIN || 'vividwalls-2.myshopify.com';

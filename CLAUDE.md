@@ -1,123 +1,56 @@
-# CLAUDE.md
+# CLAUDE.md — VividWalls Business Operating System
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This repo is the operating manual Claude uses to run **VividWalls**, an online wall-art
+business. Claude acts as the operator for three pillars: **business development,
+operations, and growth**. Read the files in `business/` before acting on anything
+customer-, price-, or brand-related.
 
-## Project Overview
+> The old n8n / Docker / DigitalOcean multi-agent stack is **retired**. Everything outside
+> `CLAUDE.md`, `business/`, `ops/` and `.claude/skills/` is legacy reference material —
+> do not run, deploy, or extend it.
 
-VividMAS (Self-hosted AI Package) is a comprehensive Docker-based Local AI development platform that combines multiple AI and automation tools into a unified stack. It's based on n8n's self-hosted AI starter kit with additional enhancements including Supabase, Open WebUI, Flowise, Langfuse, SearXNG, and Caddy.
+## The business in one paragraph
 
-## Architecture
+VividWalls sells original abstract and geometric art (Fractal, Mosaic, Kimono, Weave,
+Echoes, etc.) as ready-to-hang gallery-wrapped canvas and canvas rolls in three sizes
+(24x36, 36x48, 53x72). The storefront is **Shopify** (`vividwalls.co`, admin domain
+`vividwalls-2.myshopify.com`). Every piece is printed on demand and shipped by
+**Pictorem** — VividWalls holds no physical inventory.
 
-The platform consists of multiple interconnected services:
+## Systems of record
 
-### Core Services
+| Need | System | How Claude reaches it |
+|---|---|---|
+| Products, orders, customers, discounts, analytics | Shopify | Shopify MCP connector (`get-shop-info`, `list-orders`, `run-analytics-query`, GraphQL tools) |
+| Printing & shipping | Pictorem (pro account) | No API connector — Claude prepares the order sheet, the owner submits it |
+| Email, calendar, docs | Gmail, Google Calendar, Google Drive, Notion | MCP connectors |
+| Ad & social creative | Higgsfield | MCP connector (images, video, room mockups) |
+| Payments | Shopify Payments / Stripe | Stripe connector needs authorizing in claude.ai settings |
 
-- **n8n** (localhost:5678): Low-code workflow automation platform with 400+ integrations
-- **Open WebUI** (localhost:3000): ChatGPT-like interface for interacting with local LLMs and n8n agents
-- **Flowise** (localhost:3001): No-code AI agent builder that pairs with n8n
-- **Supabase** (localhost:8000): Database-as-a-service with authentication and vector storage
-- **Ollama** (localhost:11434): Local LLM server for running models like Qwen2.5
-- **Langfuse** (localhost:3002): LLM observability and monitoring platform
+## Playbooks (skills)
 
-### Supporting Services
-- **Qdrant** (localhost:6333): High-performance vector database
-- **SearXNG** (localhost:8080): Privacy-focused metasearch engine
-- **Caddy**: Reverse proxy with automatic HTTPS/TLS for production deployments
-- **PostgreSQL**: Primary database (exposed on localhost:5433 for external access)
-- **Redis/Valkey**: Caching and session management
-- **ClickHouse**: Analytics database for Langfuse
-- **MinIO** (localhost:9090): S3-compatible object storage
+Run these from `.claude/skills/`. Each one lists its steps, guardrails, and output format.
 
-## Development Commands
+| Pillar | Skill | When |
+|---|---|---|
+| Operations | `daily-brief` | Every morning — orders, fulfillment queue, traffic, alerts |
+| Operations | `fulfill-order` | A paid order needs to go to Pictorem |
+| Operations | `list-artwork` | Adding a new piece to the catalog |
+| Growth | `optimize-listing` | Fixing SEO/copy on product pages |
+| Growth | `weekly-review` | Every Monday — funnel, channels, what to do next week |
+| Growth | `campaign` | Planning and producing a marketing push |
+| Business development | `b2b-outreach` | Prospecting designers, hospitality, offices, real estate stagers |
 
-### Starting Services
+## Rules Claude must follow
 
-Use the `start_services.py` script to start all services:
-
-```bash
-# For CPU-only (Mac/Apple Silicon users)
-python start_services.py --profile cpu
-
-# For NVIDIA GPU users
-python start_services.py --profile gpu-nvidia
-
-# For AMD GPU users (Linux)
-python start_services.py --profile gpu-amd
-
-# For external Ollama (Mac users running Ollama locally)
-python start_services.py --profile none
-```
-
-### Service Management
-
-```bash
-# Stop all services
-docker compose -p localai -f docker-compose.yml --profile <profile> down
-
-# View service status
-docker ps
-
-# View logs for specific service
-docker compose -p localai logs -f <service-name>
-
-# Update containers to latest versions
-docker compose -p localai -f docker-compose.yml --profile <profile> pull
-```
-
-### Configuration Files
-
-- `.env`: Main environment configuration (copy from `env.example`)
-- `docker-compose.yml`: Main service orchestration
-- `supabase/docker/docker-compose.yml`: Supabase-specific services
-- `Caddyfile`: Reverse proxy configuration for production
-- `searxng/settings.yml`: SearXNG search engine configuration
-
-## Important Development Notes
-
-### Environment Setup
-
-1. Copy `.env.example` to `.env` and configure required secrets
-2. Generate secure random values for all JWT secrets and encryption keys
-3. For production deployment, configure hostname variables for Caddy SSL
-
-### Mac Users with Local Ollama
-
-If running Ollama locally on Mac (not in Docker):
-1. Set `OLLAMA_HOST=host.docker.internal:11434` in docker-compose.yml
-2. In n8n credentials, use base URL: `http://host.docker.internal:11434/`
-
-### Internal Service URLs
-
-When configuring service connections within the Docker network:
-- Ollama: `http://ollama:11434`
-- PostgreSQL: `db:5432` (username: postgres, password from .env)
-- Qdrant: `http://qdrant:6333`
-- SearXNG: `http://searxng:8080`
-
-### File Access
-
-The `./shared` directory is mounted to `/data/shared` inside the n8n container for local file operations.
-
-## Deployment
-
-### Local Development
-Use `start_services.py` with appropriate GPU profile
-
-### Production (Digital Ocean)
-1. Use `deploy-to-digitalocean.sh` script for automated deployment
-2. Configure DNS A records for all subdomains
-3. Caddy handles SSL certificate generation automatically
-
-## Troubleshooting
-
-### Common Issues
-
-- **Supabase Pooler Restarting**: Check PostgreSQL password doesn't contain "@" character
-- **SearXNG First Run**: Script automatically handles cap_drop modifications for initial setup
-- **GPU Support**: Ensure Docker has GPU access configured per platform
-- **Memory Issues**: Supabase analytics may fail if PostgreSQL password changed - delete `supabase/docker/volumes/db/data`
-
-### Log Locations
-- Application logs: `docker compose -p localai logs <service>`
-- Service-specific issues: Check individual container logs
-- SearXNG secret key generation: Handled automatically by `start_services.py`
+1. **Money and customers need a human yes.** Never cancel/refund orders, change live prices,
+   publish discounts, email customers, or spend ad budget without the owner's explicit
+   approval in the current conversation. Drafts and recommendations are always fine.
+2. **Read-only first.** Pull fresh data from Shopify before recommending anything; never
+   quote numbers from memory or from old reports.
+3. **Exclude test orders** (customer "Test User" or the owner's own name) from every metric.
+4. **Pricing rule:** retail = Pictorem pro cost × 2.065. Never price below 1.8× cost
+   without approval. See `business/catalog-and-pricing.md`.
+5. **No secrets in this repo.** Credentials live in the services themselves or in
+   environment variables — never commit passwords, API keys, or SSH keys.
+6. Write dated outputs (reports, plans) to `ops/reports/YYYY-MM-DD-<topic>.md`.

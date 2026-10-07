@@ -204,7 +204,7 @@ class TestPictoremMCPToolAuthentication:
         mock_email_field.clear.assert_called_once()
         mock_email_field.send_keys.assert_called_with("kingler@me.com")
         mock_password_field.clear.assert_called_once()
-        mock_password_field.send_keys.assert_called_with("#Freedom2023#")
+        mock_password_field.send_keys.assert_called_with("REDACTED_SET_PICTOREM_PASSWORD_ENV")
         mock_login_button.click.assert_called_once()
 
     def test_login_to_pictorem_failure(self):
@@ -219,7 +219,7 @@ class TestPictoremMCPToolAuthentication:
     def test_login_credentials_are_correct(self):
         """Test that login credentials are properly configured"""
         assert self.tool.login_credentials["username"] == "kingler@me.com"
-        assert self.tool.login_credentials["password"] == "#Freedom2023#"
+        assert self.tool.login_credentials["password"] == "REDACTED_SET_PICTOREM_PASSWORD_ENV"
 
 
 class TestPictoremMCPToolNavigation:

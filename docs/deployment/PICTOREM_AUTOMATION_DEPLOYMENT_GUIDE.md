@@ -31,7 +31,7 @@ SHOPIFY_WEBHOOK_SECRET=your_shopify_webhook_secret_here
 
 # Pictorem Credentials (already configured)
 PICTOREM_USERNAME=kingler@me.com
-PICTOREM_PASSWORD=#Freedom2023#
+PICTOREM_PASSWORD=REDACTED_SET_PICTOREM_PASSWORD_ENV
 
 # Server Configuration
 FLASK_ENV=production

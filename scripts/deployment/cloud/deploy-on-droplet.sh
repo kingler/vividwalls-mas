@@ -134,7 +134,7 @@ const server = new McpServer({
 // Pictorem API configuration
 const PICTOREM_BASE_URL = "https://www.pictorem.com";
 const PICTOREM_USERNAME = process.env.PICTOREM_USERNAME || "kingler@me.com";
-const PICTOREM_PASSWORD = process.env.PICTOREM_PASSWORD || "#Freedom2023#";
+const PICTOREM_PASSWORD = process.env.PICTOREM_PASSWORD || "REDACTED_SET_PICTOREM_PASSWORD_ENV";
 
 // Authentication helper
 let authToken: string | null = null;
@@ -360,7 +360,7 @@ PICTOREM_SERVER
     # Create environment file
     cat > .env << 'ENV_FILE'
 PICTOREM_USERNAME=kingler@me.com
-PICTOREM_PASSWORD=#Freedom2023#
+PICTOREM_PASSWORD=REDACTED_SET_PICTOREM_PASSWORD_ENV
 ENV_FILE
     
     # Add build script to package.json

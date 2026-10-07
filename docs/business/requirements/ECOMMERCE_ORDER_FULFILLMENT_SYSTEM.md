@@ -242,7 +242,7 @@ MYSHOPIFY_DOMAIN=yourstore.myshopify.com
 **Pictorem MCP Server** (`/root/vivid_mas/mcp/pictorem-mcp-server/.env`):
 ```bash
 PICTOREM_USERNAME=kingler@me.com
-PICTOREM_PASSWORD=#Freedom2023#
+PICTOREM_PASSWORD=REDACTED_SET_PICTOREM_PASSWORD_ENV
 ```
 
 ### n8n Environment Variables

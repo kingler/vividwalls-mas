@@ -15,7 +15,7 @@ Visit: https://github.com/kingler/vivid_mas/settings/secrets/actions
 
 | Secret Name | Value | Description |
 |-------------|-------|-------------|
-| `DIGITALOCEAN_SSH_KEY` | `-----BEGIN OPENSSH PRIVATE KEY-----`<br>`b3BlbnNzaC1rZXktdjEAAAAACmFlczI1Ni1jdHIAAAAGYmNyeXB0AAAAGAAAABBD1ezVia`<br>`zOT12MlwTJXeD6AAAAGAAAAAEAAAAzAAAAC3NzaC1lZDI1NTE5AAAAIDsYQNP+NSCXh4cU`<br>`3EM8MtQIa5TjzdRzvnzcSWknfrS7AAAAoIqyUlR9kumNJV4invWT2UGftg8OrrKDx1R6Lp`<br>`v3DiTHw3TL9OrKEQDrFAZFJ6joiCPpEjuWnMi5SUs524jbC5wMIsS9mQDtJ4ZWn0GoXsXr`<br>`GHDqdCYiqptYmSBH2TI3vJFC6zsoCnhwdyNU7tfCisE2JqQ8QqDZQeS5ViLxLqdx0LVO8s`<br>`41Q9AjuLHGnMhKXH4rtXJ1ZAyj9AsNAlnvxMg=`<br>`-----END OPENSSH PRIVATE KEY-----` | Your private SSH key for DigitalOcean access |
+| `DIGITALOCEAN_SSH_KEY` | `<paste private key into GitHub Secrets — never commit it>` | Your private SSH key for DigitalOcean access |
 | `DIGITALOCEAN_HOST` | `157.230.13.13` | Your DigitalOcean droplet IP address |
 | `DIGITALOCEAN_USER` | `root` | SSH user for deployment |
 

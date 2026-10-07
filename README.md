@@ -1,4 +1,20 @@
-# Self-hosted AI Package
+# VividWalls — Business Operating System
+
+This repo is how VividWalls (wall-art ecommerce on Shopify, printed on demand by Pictorem)
+is run with Claude. Start here:
+
+- `CLAUDE.md`: how Claude operates the business, the systems it uses, and the guardrails.
+- `business/`: company profile, catalog and pricing rules, KPIs, the 90-day growth plan.
+- `.claude/skills/`: playbooks (`daily-brief`, `weekly-review`, `fulfill-order`, `list-artwork`,
+  `optimize-listing`, `campaign`, `b2b-outreach`).
+- `ops/`: dated reports and the B2B pipeline.
+
+> **Everything below this line describes the retired n8n / Docker / DigitalOcean multi-agent
+> stack.** It is kept for reference only. Do not deploy it.
+
+---
+
+# (Legacy) Self-hosted AI Package
 
 **Self-hosted AI Package** is an open, docker compose template that
 quickly bootstraps a fully featured Local AI and Low Code development
@@ -131,7 +147,7 @@ The Shopify MCP server should already be present at `/root/vivid_mas/mcp/shopify
      - Connection Type: STDIO  
      - Command: `node`
      - Arguments: `["/root/vivid_mas/mcp/pictorem-mcp-server/dist/index.js"]`
-     - Environment Variables: `PICTOREM_USERNAME=kingler@me.com\nPICTOREM_PASSWORD=#Freedom2023#`
+     - Environment Variables: `PICTOREM_USERNAME=kingler@me.com\nPICTOREM_PASSWORD=REDACTED_SET_PICTOREM_PASSWORD_ENV`
    
    - **Shopify MCP Server**:
      - Connection Type: STDIO

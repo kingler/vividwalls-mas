@@ -51,7 +51,7 @@ Based on the Pictorem integration documentation, here are the data fields that a
   },
   "authentication": {
     "username": "kingler@me.com",
-    "password": "#Freedom2023#",
+    "password": "REDACTED_SET_PICTOREM_PASSWORD_ENV",
     "pro_account": true,
     "session_token": "string"
   },

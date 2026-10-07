@@ -374,7 +374,7 @@ def generate_automation_config(df):
                 "order_url": "https://www.pictorem.com/order.html",
                 "credentials": {
                     "username": "kingler@me.com",
-                    "password": "#Freedom2023#"
+                    "password": "REDACTED_SET_PICTOREM_PASSWORD_ENV"
                 }
             },
             "size_mapping": {},
