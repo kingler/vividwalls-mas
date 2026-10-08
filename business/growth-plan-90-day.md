@@ -24,7 +24,7 @@ with a proven funnel to scale from.
 - **Pinterest** is the #1 free channel for wall art: 5 pins/day from room mockups,
   boards per series and per room (living room, office, bedroom).
 - **Google**: submit to Google Merchant Center (free Shopping listings) via Shopify Google channel.
-- **Content**: 2 blog posts/week ("large wall art for living rooms", "how to choose art size
+- **Content**: 2 posts/week on the WordPress blog `vividwalls.blog` ("large wall art for living rooms", "how to choose art size
   above a sofa") linking to collections.
 - **Holiday push** (Nov 1–Dec 15): gift guide, canvas-roll gift tier, BFCM offer, last-ship date
   banner tied to Pictorem lead times.

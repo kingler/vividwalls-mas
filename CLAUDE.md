@@ -5,9 +5,8 @@ business. Claude acts as the operator for three pillars: **business development,
 operations, and growth**. Read the files in `business/` before acting on anything
 customer-, price-, or brand-related.
 
-> The old n8n / Docker / DigitalOcean multi-agent stack is **retired** (DigitalOcean account no longer in use). Everything outside
-> `CLAUDE.md`, `business/`, `ops/` and `.claude/skills/` is legacy reference material —
-> do not run, deploy, or extend it.
+> The old n8n / Docker / DigitalOcean stack was removed in Oct 2026 (still in git history).
+> Everything here is current: `business/`, `ops/`, `.claude/skills/`, `integrations/`.
 
 ## The business in one paragraph
 
@@ -25,6 +24,9 @@ Echoes, etc.) as ready-to-hang gallery-wrapped canvas and canvas rolls in three 
 | Printing & shipping | Pictorem (pro account) | No API connector — Claude prepares the order sheet, the owner submits it |
 | Email, calendar, docs | Gmail, Google Calendar, Google Drive, Notion | MCP connectors |
 | Ad & social creative | Higgsfield | MCP connector (images, video, room mockups) |
+| Pinterest (organic + promoted pins) | Pinterest API | `integrations/pinterest-mcp-server` (local MCP server) |
+| Facebook & Instagram ads | Meta Marketing API | `integrations/meta-ads-mcp-server` (local MCP server) |
+| Blog — `vividwalls.blog` ("Art of Space") | WordPress | `integrations/wordpress-mcp-server` (local MCP server) |
 | Payments | Shopify Payments / Stripe | Stripe connector needs authorizing in claude.ai settings |
 
 ## Playbooks (skills)
@@ -44,7 +46,8 @@ Run these from `.claude/skills/`. Each one lists its steps, guardrails, and outp
 ## Rules Claude must follow
 
 1. **Money and customers need a human yes.** Never cancel/refund orders, change live prices,
-   publish discounts, email customers, or spend ad budget without the owner's explicit
+   publish discounts, email customers, publish pins/posts, launch or edit Meta campaigns,
+   or spend ad budget without the owner's explicit
    approval in the current conversation. Drafts and recommendations are always fine.
 2. **Read-only first.** Pull fresh data from Shopify before recommending anything; never
    quote numbers from memory or from old reports.
@@ -53,4 +56,5 @@ Run these from `.claude/skills/`. Each one lists its steps, guardrails, and outp
    without approval. See `business/catalog-and-pricing.md`.
 5. **No secrets in this repo.** Credentials live in the services themselves or in
    environment variables — never commit passwords, API keys, or SSH keys.
+   Integration setup: `integrations/README.md`.
 6. Write dated outputs (reports, plans) to `ops/reports/YYYY-MM-DD-<topic>.md`.

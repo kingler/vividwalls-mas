@@ -40,5 +40,6 @@ No inventory risk; the trade-off is lead time (print + ship) and shipping cost o
 
 ## Channels in place
 - Shopify store `vividwalls.co` (Basic plan)
-- Blog / content site historically at `vividwalls.blog` (WordPress "Art of Space") — status to confirm
-- Social: Instagram, Facebook, Pinterest accounts (activity to confirm)
+- Blog: `vividwalls.blog` (WordPress, "Art of Space"). Managed via `integrations/wordpress-mcp-server`
+- Pinterest: organic and promoted pins. Managed via `integrations/pinterest-mcp-server`
+- Meta (Facebook and Instagram) ads. Managed via `integrations/meta-ads-mcp-server`
