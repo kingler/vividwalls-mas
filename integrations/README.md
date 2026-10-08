@@ -24,7 +24,9 @@ cd ../wordpress-mcp-server && npm install && npm run build
 ```
 
 The Python servers need MCP SDK 1.x (`mcp<2`, pinned in `requirements.txt`). SDK 2.x
-renamed `FastMCP`, and the servers won't start with it.
+renamed `FastMCP`, and the servers won't start with it. The WordPress server pins
+`@modelcontextprotocol/sdk ~1.12.1` and forces a single `zod@3.24.4` through npm
+`overrides`. Newer SDK/zod combinations make `tsc` run out of memory.
 
 ## Register with Claude Code
 
