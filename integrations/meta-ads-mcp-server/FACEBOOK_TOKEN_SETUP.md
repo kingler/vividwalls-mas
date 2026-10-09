@@ -29,7 +29,7 @@
 
 ```bash
 # Edit the .env file
-cd /Users/kinglerbercy/Projects/vivid_mas/mcp/facebook-ads-mcp-server
+cd integrations/meta-ads-mcp-server
 nano .env
 
 # Replace the placeholder with your actual token:
@@ -40,7 +40,7 @@ FACEBOOK_ACCESS_TOKEN=your_actual_long_token_here
 
 ```bash
 # Run the test script
-cd /Users/kinglerbercy/Projects/vivid_mas/mcp/facebook-ads-mcp-server
+cd integrations/meta-ads-mcp-server
 source venv/bin/activate
 python test_connection.py
 ```

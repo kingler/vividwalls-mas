@@ -50,5 +50,5 @@ fallen since June (492 → 152 sessions/month).
 ## Security (repo, not store)
 The public GitHub repo `kingler/vividwalls-mas` contains, in plain text: the Pictorem account
 password (11 files including README.md), a DigitalOcean SSH private key
-(`docs/guides/setup/GITHUB_CICD_SETUP.md`), an n8n API key, and a database password.
+(in a since-deleted CI setup doc), an n8n API key, and a database password.
 **Rotate all of them.** Then either make the repo private or purge the git history.

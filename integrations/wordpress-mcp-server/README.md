@@ -60,7 +60,7 @@ A comprehensive Model Context Protocol (MCP) server for WordPress management wit
 
 1. **Clone and Install**
    ```bash
-   cd /Users/kinglerbercy/Projects/vivid_mas/mcp/wordpress-mcp-server
+   cd integrations/wordpress-mcp-server
    npm install
    ```
 
@@ -399,14 +399,6 @@ echo '{"tool":"wordpress-health-check","arguments":{}}' | npm start
 ```
 
 ## Integration with VividWalls
-
-### n8n Workflow Integration
-The server integrates seamlessly with n8n workflows for:
-- Automated content scheduling
-- Social media cross-posting
-- Email marketing campaigns
-- Analytics tracking
-- Customer engagement flows
 
 ### Claude Code Integration
 Perfect for use with Claude Code for:
