@@ -18,23 +18,39 @@ def shopify_domain() -> str:
 SHOPIFY_KEYCHAIN_SERVICE = "vividwalls-shopify-admin"
 
 
-def keychain_secret(service: str) -> str:
-    """A generic password from the macOS Keychain, or "" when absent (or not on macOS)."""
+KEYCHAIN_ITEM_NOT_FOUND = 44  # `security` exit status when no item matches
+
+
+def keychain_secret(service: str, account: str | None = None) -> str:
+    """A generic password from the macOS Keychain, or "" when there is no such item (or no
+    Keychain, e.g. not on macOS). A Keychain that exists but cannot be read (locked, access
+    denied, timed out) raises instead, so it is not mistaken for a missing token."""
+    import subprocess
+    cmd = ["security", "find-generic-password", "-s", service, *(["-a", account] if account else []), "-w"]
     try:
-        import subprocess
-        return subprocess.run(["security", "find-generic-password", "-s", service, "-w"],
-                              capture_output=True, text=True, timeout=10).stdout.strip()
-    except (OSError, subprocess.SubprocessError):
+        done = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+    except FileNotFoundError:
         return ""
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f'Keychain read for "{service}" timed out; unlock the Keychain and try again.')
+    if done.returncode == 0:
+        return done.stdout.strip()
+    if done.returncode == KEYCHAIN_ITEM_NOT_FOUND:
+        return ""
+    raise RuntimeError(f'Keychain read for "{service}" failed (exit {done.returncode}): {done.stderr.strip()}')
 
 
 def shopify_token() -> str:
-    """Admin API token from SHOPIFY_ADMIN_TOKEN, else the macOS Keychain. Never logged or returned."""
-    token = os.environ.get("SHOPIFY_ADMIN_TOKEN", "").strip() or keychain_secret(SHOPIFY_KEYCHAIN_SERVICE)
+    """Admin API token from SHOPIFY_ADMIN_TOKEN, else the Keychain item for this store
+    (service vividwalls-shopify-admin, account = the store's admin domain), so another store's
+    token is never used. Returned only to the Shopify client that authenticates requests; never
+    logged or included in tool results."""
+    token = os.environ.get("SHOPIFY_ADMIN_TOKEN", "").strip() or keychain_secret(
+        SHOPIFY_KEYCHAIN_SERVICE, account=shopify_domain())
     if not token:
         raise RuntimeError(
             "Shopify Admin API token not found: set SHOPIFY_ADMIN_TOKEN or store it in the macOS Keychain "
-            f'as service "{SHOPIFY_KEYCHAIN_SERVICE}".')
+            f'as service "{SHOPIFY_KEYCHAIN_SERVICE}" with account "{shopify_domain()}".')
     return token
 
 
@@ -50,7 +66,8 @@ PICTOREM_KEYCHAIN_SERVICE = "vividwalls-pictorem-api"
 
 
 def pictorem_api_key() -> str:
-    """ArtFlow token from PICTOREM_ARTFLOW_KEY, else the macOS Keychain. Never logged or returned."""
+    """ArtFlow token from PICTOREM_ARTFLOW_KEY, else the macOS Keychain. Returned only to the
+    Pictorem client that authenticates requests; never logged or included in tool results."""
     key = os.environ.get("PICTOREM_ARTFLOW_KEY", "").strip() or keychain_secret(PICTOREM_KEYCHAIN_SERVICE)
     if not key:
         raise RuntimeError(

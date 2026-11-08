@@ -55,8 +55,9 @@ Run these from `.claude/skills/`. Each one lists its steps, guardrails, and outp
 3. **Exclude test orders** (customer "Test User" or the owner's own name) from every metric.
 4. **Pricing rule:** retail = Pictorem pro cost × 2.065. Never price below 1.8× cost
    without approval. See `business/catalog-and-pricing.md`.
-5. **No secrets in this repo.** Credentials live in the services themselves or in
-   environment variables — never commit passwords, API keys, or SSH keys.
+5. **No secrets in this repo.** Credentials live in the services themselves, in environment
+   variables, or in the macOS Keychain (the `vividwalls-ops` server reads its Shopify and
+   Pictorem tokens there) — never commit passwords, API keys, or SSH keys.
    Integration setup: `integrations/README.md`.
 7. Store-changing `vividwalls-ops` tools preview by default. Show the owner the preview and call
    again with `confirm=true` only after they approve.

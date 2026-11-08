@@ -402,12 +402,52 @@ def test_redirect_to_a_private_host_is_refused(monkeypatch):
     assert problem and "redirects to a non-public address" in problem
 
 
-def test_shopify_token_comes_from_env_then_keychain(monkeypatch):
+def test_shopify_token_comes_from_env_then_this_stores_keychain_item(monkeypatch):
     monkeypatch.setenv("SHOPIFY_ADMIN_TOKEN", " shpat_env ")
     assert config.shopify_token() == "shpat_env"
     monkeypatch.delenv("SHOPIFY_ADMIN_TOKEN")
-    monkeypatch.setattr(config, "keychain_secret", lambda service: "shpat_kc" if service == "vividwalls-shopify-admin" else "")
+    seen = []
+
+    def fake(service, account=None):
+        seen.append((service, account))
+        return "shpat_kc" if (service, account) == ("vividwalls-shopify-admin", "vividwalls-2.myshopify.com") else ""
+
+    monkeypatch.setattr(config, "keychain_secret", fake)
     assert config.shopify_token() == "shpat_kc"
-    monkeypatch.setattr(config, "keychain_secret", lambda service: "")
-    with pytest.raises(RuntimeError, match="vividwalls-shopify-admin"):
+    assert seen == [("vividwalls-shopify-admin", "vividwalls-2.myshopify.com")]
+    monkeypatch.setenv("SHOPIFY_STORE_DOMAIN", "other-store.myshopify.com")
+    with pytest.raises(RuntimeError, match='account "other-store.myshopify.com"'):
         config.shopify_token()
+
+
+class _Done:
+    def __init__(self, rc, out="", err=""):
+        self.returncode, self.stdout, self.stderr = rc, out, err
+
+
+@pytest.mark.parametrize("outcome,expect", [
+    (_Done(0, "secret\n"), "secret"),
+    (_Done(44, err="The specified item could not be found in the keychain."), ""),
+])
+def test_keychain_secret_found_or_missing(monkeypatch, outcome, expect):
+    import importlib, subprocess
+    real = importlib.reload(config)  # undo the autouse stub for this test
+    calls = []
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **k: calls.append(cmd) or outcome)
+    assert real.keychain_secret("svc", account="acct") == expect
+    assert calls[0][:6] == ["security", "find-generic-password", "-s", "svc", "-a", "acct"]
+
+
+def test_keychain_read_failures_are_not_reported_as_missing(monkeypatch):
+    import importlib, subprocess
+    real = importlib.reload(config)
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **k: _Done(51, err="User interaction is not allowed."))
+    with pytest.raises(RuntimeError, match="failed .exit 51.: User interaction is not allowed"):
+        real.keychain_secret("svc")
+
+    def timeout(cmd, **k):
+        raise subprocess.TimeoutExpired(cmd, 10)
+
+    monkeypatch.setattr(subprocess, "run", timeout)
+    with pytest.raises(RuntimeError, match="timed out"):
+        real.keychain_secret("svc")
