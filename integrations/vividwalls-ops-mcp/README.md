@@ -75,16 +75,20 @@ prepare drafts for the owner.
    Admin API scopes `read_orders`, `write_orders`, `read_products`, `write_products`,
    `read_merchant_managed_fulfillment_orders` and `write_merchant_managed_fulfillment_orders`,
    then install the app and copy the Admin API access token.
-2. Install and register:
+2. Store the token in the macOS Keychain (the server reads it at call time, so no config file
+   holds it), then install and register:
    ```bash
+   security add-generic-password -U -s vividwalls-shopify-admin -a vividwalls-2.myshopify.com -w
    # from the repository root
    (cd integrations/vividwalls-ops-mcp && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt)
    claude mcp add vividwalls-ops \
-     -e SHOPIFY_ADMIN_TOKEN=... \
      -e VIVIDWALLS_TEST_CUSTOMERS="Test User" \
      -e VIVIDWALLS_ALLOW_WRITES=1 -- \
      integrations/vividwalls-ops-mcp/.venv/bin/python integrations/vividwalls-ops-mcp/server.py
    ```
+   MABOS agents use the same server through its `vividwallsOps` plugin setting (command, args, cwd,
+   env); MABOS then asks for operator approval on every confirmed order, fulfillment and store change.
+   On machines without a Keychain, pass `-e SHOPIFY_ADMIN_TOKEN=...` instead.
    Leave out `VIVIDWALLS_ALLOW_WRITES=1` wherever the server should only ever draft.
 3. Pictorem API token: in Pictorem go to **My Account → API Key & Docs**, create a token, then store it
    in the macOS Keychain (it is read at call time and never written to disk by the server):
@@ -95,7 +99,7 @@ prepare drafts for the owner.
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `SHOPIFY_ADMIN_TOKEN` | Admin API token (required for store tools) | none |
+| `SHOPIFY_ADMIN_TOKEN` | Admin API token. If unset, read from the macOS Keychain item `vividwalls-shopify-admin` | none |
 | `SHOPIFY_STORE_DOMAIN` | Store admin domain | `vividwalls-2.myshopify.com` |
 | `VIVIDWALLS_TEST_CUSTOMERS` | Comma-separated customer names whose orders are tests. The store owner's name (from Shopify) is always added | `Test User` |
 | `VIVIDWALLS_ALLOW_WRITES` | `1` lets confirmed writes through | off |

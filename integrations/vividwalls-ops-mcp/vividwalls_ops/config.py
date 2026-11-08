@@ -13,10 +13,28 @@ def shopify_domain() -> str:
     return os.environ.get("SHOPIFY_STORE_DOMAIN", "vividwalls-2.myshopify.com")
 
 
+# macOS Keychain item holding the Shopify Admin API token (created by the owner with
+# `security add-generic-password -U -s vividwalls-shopify-admin -a <store domain> -w`).
+SHOPIFY_KEYCHAIN_SERVICE = "vividwalls-shopify-admin"
+
+
+def keychain_secret(service: str) -> str:
+    """A generic password from the macOS Keychain, or "" when absent (or not on macOS)."""
+    try:
+        import subprocess
+        return subprocess.run(["security", "find-generic-password", "-s", service, "-w"],
+                              capture_output=True, text=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
 def shopify_token() -> str:
-    token = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
+    """Admin API token from SHOPIFY_ADMIN_TOKEN, else the macOS Keychain. Never logged or returned."""
+    token = os.environ.get("SHOPIFY_ADMIN_TOKEN", "").strip() or keychain_secret(SHOPIFY_KEYCHAIN_SERVICE)
     if not token:
-        raise RuntimeError("SHOPIFY_ADMIN_TOKEN is not set (Shopify custom app Admin API token).")
+        raise RuntimeError(
+            "Shopify Admin API token not found: set SHOPIFY_ADMIN_TOKEN or store it in the macOS Keychain "
+            f'as service "{SHOPIFY_KEYCHAIN_SERVICE}".')
     return token
 
 
@@ -33,17 +51,7 @@ PICTOREM_KEYCHAIN_SERVICE = "vividwalls-pictorem-api"
 
 def pictorem_api_key() -> str:
     """ArtFlow token from PICTOREM_ARTFLOW_KEY, else the macOS Keychain. Never logged or returned."""
-    key = os.environ.get("PICTOREM_ARTFLOW_KEY", "").strip()
-    if key:
-        return key
-    try:
-        import subprocess
-        key = subprocess.run(
-            ["security", "find-generic-password", "-s", PICTOREM_KEYCHAIN_SERVICE, "-w"],
-            capture_output=True, text=True, timeout=10,
-        ).stdout.strip()
-    except (OSError, subprocess.SubprocessError):
-        key = ""
+    key = os.environ.get("PICTOREM_ARTFLOW_KEY", "").strip() or keychain_secret(PICTOREM_KEYCHAIN_SERVICE)
     if not key:
         raise RuntimeError(
             "Pictorem API token not found: set PICTOREM_ARTFLOW_KEY or store it in the macOS Keychain "

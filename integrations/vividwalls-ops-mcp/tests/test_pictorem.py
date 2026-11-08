@@ -400,3 +400,14 @@ def test_redirect_to_a_private_host_is_refused(monkeypatch):
     monkeypatch.setattr(pictorem.httpx, "head", lambda *a, **k: final)
     problem = Pictorem(transport=lambda e, f: (200, {})).file_problem("https://cdn.example/a.png")
     assert problem and "redirects to a non-public address" in problem
+
+
+def test_shopify_token_comes_from_env_then_keychain(monkeypatch):
+    monkeypatch.setenv("SHOPIFY_ADMIN_TOKEN", " shpat_env ")
+    assert config.shopify_token() == "shpat_env"
+    monkeypatch.delenv("SHOPIFY_ADMIN_TOKEN")
+    monkeypatch.setattr(config, "keychain_secret", lambda service: "shpat_kc" if service == "vividwalls-shopify-admin" else "")
+    assert config.shopify_token() == "shpat_kc"
+    monkeypatch.setattr(config, "keychain_secret", lambda service: "")
+    with pytest.raises(RuntimeError, match="vividwalls-shopify-admin"):
+        config.shopify_token()
