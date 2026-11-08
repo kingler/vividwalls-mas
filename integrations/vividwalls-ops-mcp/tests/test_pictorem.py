@@ -344,3 +344,59 @@ def test_public_https_rule():
     assert pictorem.public_https_problem("https://10.0.0.5/a.tif")
     assert pictorem.public_https_problem("https://nas.local/a.tif")
     assert pictorem.public_https_problem("ftp://cdn.example/a.tif")
+
+
+# Pictorem rejects a fileurl line without filetype ("orderList[0][filetype] is required and must be
+# jpg / png / tiff"), found by a sandbox order on 2026-11-08.
+@pytest.mark.parametrize("url,kind", [
+    ("https://cdn.shopify.com/files/Deep.png", "png"), ("https://x.example/a.JPEG", "jpg"),
+    ("https://x.example/a.tif?v=3", "tiff"), ("https://x.example/print", None)])
+def test_file_type_from_url(url, kind):
+    assert orders.file_type(url) == kind
+
+
+def test_file_url_orders_send_the_file_type(monkeypatch):
+    monkeypatch.setenv("VIVIDWALLS_ALLOW_WRITES", "1")
+    pic = FakePictorem()
+    shop = FakeShop([order(collection=None, file_url="https://cdn.shopify.com/files/Deep.png?v=1")])
+    approve(shop, pic)
+    assert sent(pic)[0]["orderList[0][filetype]"] == "png"
+    assert sent(pic)[0]["orderList[0][fileurl]"] == "https://cdn.shopify.com/files/Deep.png?v=1"
+
+
+def test_file_url_without_a_known_type_is_refused():
+    q = orders.quote_order(FakeShop([order(collection=None, file_url="https://files.example/print")]),
+                           FakePictorem(), "#1009")
+    assert not q["ready"] and any(".jpg, .png or .tif" in p for p in q["problems"])
+
+
+# --- second review: resolve hostnames, refuse untyped links at setup -------------
+def test_set_print_file_refuses_a_link_orders_would_reject(monkeypatch):
+    monkeypatch.setattr(pictorem.socket, "getaddrinfo", lambda h, p: [(0, 0, 0, "", ("151.101.1.1", 443))])
+    shop = FakeShop([])
+    out = orders.set_print_file(shop, "gid://shopify/Product/7", file_url="https://files.example/print", confirm=True)
+    assert out["applied"] is False and ".jpg, .png or .tif" in out["errors"][0]
+    assert not any(op == "SetPrintFile" for op, _ in shop.calls)
+
+
+def test_hostname_pointing_at_a_private_address_is_refused(monkeypatch):
+    monkeypatch.setattr(pictorem.socket, "getaddrinfo", lambda h, p: [(0, 0, 0, "", ("10.1.2.3", 443))])
+    assert "not a public address" in pictorem.public_https_problem("https://files.example/a.png", resolve=True)
+    shop = FakeShop([])
+    out = orders.set_print_file(shop, "gid://shopify/Product/7", file_url="https://files.example/a.png", confirm=True)
+    assert out["applied"] is False and not shop.calls
+
+
+def test_redirect_to_a_private_host_is_refused(monkeypatch):
+    import httpx
+
+    def fake_resolve(host, port):
+        return [(0, 0, 0, "", ("10.0.0.9" if host == "internal.example" else "151.101.1.1", 443))]
+
+    monkeypatch.setattr(pictorem.socket, "getaddrinfo", fake_resolve)
+    hop = httpx.Response(302, request=httpx.Request("HEAD", "https://cdn.example/a.png"))
+    final = httpx.Response(200, headers={"content-type": "image/png"},
+                           request=httpx.Request("HEAD", "https://internal.example/a.png"), history=[hop])
+    monkeypatch.setattr(pictorem.httpx, "head", lambda *a, **k: final)
+    problem = Pictorem(transport=lambda e, f: (200, {})).file_problem("https://cdn.example/a.png")
+    assert problem and "redirects to a non-public address" in problem

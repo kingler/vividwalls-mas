@@ -327,6 +327,8 @@ def quote_order(shop: Shopify, pic: Pictorem, order_name: str, accept_quote: boo
         source = print_source(li)
         if not source:
             problems.append(f'no print file for "{li["title"]}": set one with set_print_file')
+        elif "fileurl" in source and not file_type(source["fileurl"]):
+            problems.append(f'"{li["title"]}": print file must end in .jpg, .png or .tif (Pictorem needs the file type)')
         elif "fileurl" in source and (file_issue := pic.file_problem(source["fileurl"])):
             problems.append(f'"{li["title"]}": {file_issue}')
         if not (sheet_line["size"] and sheet_line["format"]):
@@ -365,9 +367,23 @@ def quote_order(shop: Shopify, pic: Pictorem, order_name: str, accept_quote: boo
     return quote
 
 
+FILE_TYPES = {"jpg": "jpg", "jpeg": "jpg", "png": "png", "tif": "tiff", "tiff": "tiff"}
+
+
+def file_type(url: str) -> str | None:
+    """Pictorem's filetype for a print-file URL (required with fileurl): jpg, png or tiff."""
+    ext = urlparse(url).path.rsplit(".", 1)[-1].lower() if "." in urlparse(url).path else ""
+    return FILE_TYPES.get(ext)
+
+
 def _order_lines(quote: dict) -> list[dict]:
-    return [{"code": ln["code"], **ln["source"], "comment": ln.get("print_file") or ln["artwork"]}
-            for ln in quote["lines"]]
+    lines = []
+    for ln in quote["lines"]:
+        line = {"code": ln["code"], **ln["source"], "comment": ln.get("print_file") or ln["artwork"]}
+        if "fileurl" in line:
+            line["filetype"] = file_type(line["fileurl"])
+        lines.append(line)
+    return lines
 
 
 def submit_order(shop: Shopify, pic: Pictorem, order_name: str, confirm: bool = False,
@@ -443,8 +459,10 @@ def set_print_file(shop: Shopify, product_id: str, collection_id: str = "", file
         return {"applied": False, "errors": ["give exactly one of collection_id or file_url"]}
     if collection_id and not collection_id.isdigit():
         return {"applied": False, "errors": ["collection_id must be the numeric Pictorem artwork ID"]}
-    if file_url and (problem := pictorem.public_https_problem(file_url)):
+    if file_url and (problem := pictorem.public_https_problem(file_url, resolve=True)):
         return {"applied": False, "errors": [problem]}
+    if file_url and not file_type(file_url):
+        return {"applied": False, "errors": ["file_url must end in .jpg, .png or .tif (Pictorem needs the file type)"]}
     key, value, kind = (("pictorem_collection_id", collection_id, "single_line_text_field") if collection_id
                         else ("print_file_url", file_url, "url"))
     fields = [{"ownerId": product_id, "namespace": config.METAFIELD_NAMESPACE, "key": key, "type": kind,
