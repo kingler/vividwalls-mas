@@ -344,3 +344,27 @@ def test_public_https_rule():
     assert pictorem.public_https_problem("https://10.0.0.5/a.tif")
     assert pictorem.public_https_problem("https://nas.local/a.tif")
     assert pictorem.public_https_problem("ftp://cdn.example/a.tif")
+
+
+# Pictorem rejects a fileurl line without filetype ("orderList[0][filetype] is required and must be
+# jpg / png / tiff"), found by a sandbox order on 2026-11-08.
+@pytest.mark.parametrize("url,kind", [
+    ("https://cdn.shopify.com/files/Deep.png", "png"), ("https://x.example/a.JPEG", "jpg"),
+    ("https://x.example/a.tif?v=3", "tiff"), ("https://x.example/print", None)])
+def test_file_type_from_url(url, kind):
+    assert orders.file_type(url) == kind
+
+
+def test_file_url_orders_send_the_file_type(monkeypatch):
+    monkeypatch.setenv("VIVIDWALLS_ALLOW_WRITES", "1")
+    pic = FakePictorem()
+    shop = FakeShop([order(collection=None, file_url="https://cdn.shopify.com/files/Deep.png?v=1")])
+    approve(shop, pic)
+    assert sent(pic)[0]["orderList[0][filetype]"] == "png"
+    assert sent(pic)[0]["orderList[0][fileurl]"] == "https://cdn.shopify.com/files/Deep.png?v=1"
+
+
+def test_file_url_without_a_known_type_is_refused():
+    q = orders.quote_order(FakeShop([order(collection=None, file_url="https://files.example/print")]),
+                           FakePictorem(), "#1009")
+    assert not q["ready"] and any(".jpg, .png or .tif" in p for p in q["problems"])
