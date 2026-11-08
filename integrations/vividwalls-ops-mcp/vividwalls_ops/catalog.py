@@ -34,16 +34,16 @@ mutation SaveProfile($metafields: [MetafieldsSetInput!]!) {
 def validate_profile(profile: dict) -> tuple[dict, list[str]]:
     """Normalise an artwork profile and list anything invalid."""
     errors = []
-    colors = [c.strip().lower() for c in profile.get("dominant_colors", []) if c and c.strip()]
+    colors = [str(c).strip().lower() for c in profile.get("dominant_colors", []) if str(c or "").strip()]
     if not 1 <= len(colors) <= 6:
         errors.append("dominant_colors needs 1-6 colour names")
     temp = str(profile.get("color_temperature", "")).strip().lower()
     if temp not in TEMPERATURES:
         errors.append(f"color_temperature must be one of {sorted(TEMPERATURES)}")
-    moods = [m.strip().lower() for m in profile.get("moods", [])]
+    moods = [str(m).strip().lower() for m in profile.get("moods", [])]
     if not 1 <= len(moods) <= 3 or set(moods) - MOODS:
         errors.append(f"moods needs 1-3 of {sorted(MOODS)}")
-    rooms = [r.strip().lower() for r in profile.get("rooms", [])]
+    rooms = [str(r).strip().lower() for r in profile.get("rooms", [])]
     if not 1 <= len(rooms) <= 4 or set(rooms) - ROOMS:
         errors.append(f"rooms needs 1-4 of {sorted(ROOMS)}")
     clean = {"dominant_colors": colors, "color_temperature": temp, "moods": moods, "rooms": rooms}

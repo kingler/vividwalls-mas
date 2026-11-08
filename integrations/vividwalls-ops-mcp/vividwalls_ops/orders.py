@@ -86,6 +86,8 @@ def pictorem_order_sheet(order: dict) -> dict:
     problems = []
     if is_test_order(order):
         problems.append("test order: do not submit")
+    if order.get("displayFulfillmentStatus") not in (None, "UNFULFILLED"):
+        problems.append(f'already {order["displayFulfillmentStatus"].lower()}: do not order another print')
     if order.get("displayFinancialStatus") != "PAID":
         problems.append(f'payment is {order.get("displayFinancialStatus")}, not PAID')
     addr = order.get("shippingAddress") or {}
@@ -117,7 +119,7 @@ def get_order_sheet(shop: Shopify, order_name: str) -> dict:
     data = shop.run(UNFULFILLED_QUERY, {"q": f"name:{order_name}"})
     nodes = data["orders"]["nodes"]
     if not nodes:
-        return {"ready": False, "problems": [f"order {order_name} not found among unfulfilled orders"]}
+        return {"ready": False, "problems": [f"order {order_name} not found"]}
     return pictorem_order_sheet(nodes[0])
 
 

@@ -4,6 +4,8 @@ Store-changing tools preview by default. They only act with confirm=true AND
 VIVIDWALLS_ALLOW_WRITES=1, so scheduled runs (which don't set it) can only draft."""
 from functools import wraps
 
+import httpx
+
 from mcp.server.fastmcp import FastMCP
 
 from vividwalls_ops import catalog, marketing, orders, pricing
@@ -26,6 +28,8 @@ def safe(fn):
             return fn(*args, **kwargs)
         except (ShopifyError, RuntimeError) as e:
             return {"error": str(e)}
+        except httpx.HTTPError as e:
+            return {"error": f"Shopify request failed: {e}"}
     return wrapper
 
 

@@ -94,6 +94,13 @@ def test_order_sheet_flags_problems(monkeypatch):
         assert expected in problems
 
 
+def test_order_sheet_refuses_already_fulfilled_order():
+    done = order("22")
+    done["displayFulfillmentStatus"] = "FULFILLED"
+    sheet = orders.pictorem_order_sheet(done)
+    assert not sheet["ready"] and any("already fulfilled" in p for p in sheet["problems"])
+
+
 # --- approval gate -------------------------------------------------------
 def test_writes_need_confirm_and_switch(monkeypatch):
     shop = FakeShop({"TagOrder": {"data": {"tagsAdd": {"node": {"id": "x"}, "userErrors": []}}}})
@@ -192,3 +199,15 @@ def test_utm_and_pin_drafts():
     pins = marketing.pin_drafts("Noir Mosaic no1", "https://vividwalls.co/products/noir-mosaic-no1", "holiday", ["living room", "office"])
     assert len(pins) == 2 and all(len(p["title"]) <= 100 for p in pins)
     assert "utm_content=office" in pins[1]["link"]
+
+
+def test_server_tools_return_errors_instead_of_crashing(monkeypatch):
+    import httpx
+    import server
+    def boom(*a, **k):
+        raise httpx.ConnectError("no route")
+    monkeypatch.setattr(server, "_shop", Shopify(transport=boom))
+    assert "Shopify request failed" in server.fulfillment_queue()["error"]
+    monkeypatch.setattr(server, "_shop", None)
+    monkeypatch.delenv("SHOPIFY_ADMIN_TOKEN", raising=False)
+    assert "SHOPIFY_ADMIN_TOKEN" in server.unprofiled_artworks()["error"]
