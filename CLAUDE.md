@@ -21,7 +21,8 @@ Echoes, etc.) as ready-to-hang gallery-wrapped canvas and canvas rolls in three 
 | Need | System | How Claude reaches it |
 |---|---|---|
 | Products, orders, customers, discounts, analytics | Shopify | Shopify MCP connector (`get-shop-info`, `list-orders`, `run-analytics-query`, GraphQL tools) |
-| Printing & shipping | Pictorem (pro account) | No API connector — Claude prepares the order sheet, the owner submits it |
+| Printing & shipping | Pictorem (pro account) | No API connector — Claude prepares the order sheet (`pictorem_order_sheet`), the owner submits it |
+| Order queue, artwork profiles & search, pricing checks | VividWalls Ops | `integrations/vividwalls-ops-mcp` (local MCP server: the old n8n workflows as functions). It calls the Shopify Admin API directly with its own token, so it also works in scheduled runs; use it rather than the connector for these tasks |
 | Email, calendar, docs | Gmail, Google Calendar, Google Drive, Notion | MCP connectors |
 | Ad & social creative | Higgsfield | MCP connector (images, video, room mockups) |
 | Pinterest (organic + promoted pins) | Pinterest API | `integrations/pinterest-mcp-server` (local MCP server) |
@@ -57,4 +58,6 @@ Run these from `.claude/skills/`. Each one lists its steps, guardrails, and outp
 5. **No secrets in this repo.** Credentials live in the services themselves or in
    environment variables — never commit passwords, API keys, or SSH keys.
    Integration setup: `integrations/README.md`.
+7. Store-changing `vividwalls-ops` tools preview by default. Show the owner the preview and call
+   again with `confirm=true` only after they approve.
 6. Write dated outputs (reports, plans) to `ops/reports/YYYY-MM-DD-<topic>.md`.

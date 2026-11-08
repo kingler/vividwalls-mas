@@ -9,25 +9,19 @@ Pictorem has no API connector, so Claude prepares everything and the owner submi
 order in the Pictorem pro dashboard (about 2 minutes).
 
 ## Steps
-1. `get-order` for the order. Confirm: payment captured (PAID), not a test order, and the
-   shipping address is complete. Stop and ask if anything is off.
-2. For each line item, build the **Pictorem order sheet**:
-   | Field | Source |
-   |---|---|
-   | Artwork | product title + handle |
-   | Print file | master file name in Pictorem library (same as product handle) |
-   | Format | Gallery Wrapped Stretched Canvas → "Canvas, stretched, 1.5in gallery wrap" · Canvas Roll → "Canvas, rolled" |
-   | Size | variant size (e.g. 36x48), orientation from the artwork |
-   | Quantity | line quantity |
-   | Ship to | customer name and full address, phone |
-   | Packing | brand as VividWalls, no Pictorem invoice in the box |
-   | Expected cost | retail ÷ 2.065 (sanity check: flag if the Pictorem quote is >10% higher) |
-3. Draft the customer confirmation email (Gmail draft, not sent): thank-you, printing timeline
-   (Pictorem production plus shipping, typically 7–12 business days), what to expect.
-4. After the owner confirms submission, record the Pictorem order number in a Shopify order note
-   or tag (`pictorem:<id>`), with approval.
-5. When tracking arrives (Gmail search `from:pictorem tracking`), create the Shopify fulfillment
-   with the tracking number so Shopify emails the customer. Get approval before running the mutation.
+Use the `vividwalls-ops` tools (`integrations/vividwalls-ops-mcp`).
+1. `fulfillment_queue`: lists paid, unfulfilled, real orders (test orders are already excluded),
+   oldest first. Anything marked `urgent` (over 24 hours) goes first.
+2. `pictorem_order_sheet("#NNNN")`: gives the exact sheet the owner enters in the Pictorem pro
+   dashboard (print file, format, size, quantity, ship-to address, packing note, expected cost).
+   If `ready` is false, stop and tell the owner each item in `problems`.
+3. Draft the customer confirmation email as a Gmail draft, not sent: a thank-you, the printing
+   timeline (Pictorem production plus shipping, typically 7-12 business days) and what to expect.
+4. Once the owner confirms the order is submitted, call `record_pictorem_submission(order_id,
+   pictorem_order_id)`. It previews first; call it again with `confirm=true` after approval.
+5. When tracking arrives (Gmail search `from:pictorem tracking`), call `mark_fulfilled(order_id,
+   tracking_number, carrier=...)`. It previews first and needs `confirm=true`. Shopify then
+   emails the customer.
 
 ## Guardrails
 - Never submit to Pictorem or mark an order fulfilled without the owner's go-ahead.

@@ -22,5 +22,7 @@ orientation, and optionally an inspiration or story line.
 4. Create the product as a **DRAFT** (`create-product`) with product type `Artwork`, vendor
    `VividWalls`, series tag, variants Size × Format at ladder prices, inventory **not tracked**.
 5. Add it to the series collection (`add-to-collection`).
+5b. Look at the artwork and save its profile with `save_artwork_profile` (colours, temperature,
+   moods, rooms) so `search_artworks` can recommend it. Use `price_check` on the variant prices.
 6. Remind the owner to upload the master file to Pictorem under the same handle.
 7. Publish (set ACTIVE) only after the owner reviews the draft.

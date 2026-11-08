@@ -14,7 +14,8 @@ offer (if any) · dates · channels · budget (paid ads only).
    Instagram 4:5 and Stories 9:16. Optionally one 6–10s slow-pan video per piece.
 2. **Pinterest** (`pinterest` MCP server): 5 pins per piece. Keyword-rich titles and descriptions
    ("Large abstract wall art for living room — <Name>"), each linking to the product with UTM
-   `?utm_source=pinterest&utm_campaign=<slug>`. Use `get_boards` to pick the series or room board.
+   `?utm_source=pinterest&utm_campaign=<slug>` (build them with `pin_drafts` / `utm_link`). Use
+   `get_boards` to pick the series or room board.
    After approval, publish with `create_pin` or `schedule_pins`. Use `get_trending_topics` for seasonal keywords.
 3. **Instagram/Facebook organic**: 3 posts plus 3 stories, caption in the brand voice, CTA to the
    collection. Delivered as copy and creative for the owner to post.

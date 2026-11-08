@@ -8,6 +8,7 @@ claude.ai connectors, so they need nothing here.
 |---|---|---|---|
 | `pinterest-mcp-server` (Python) | Pinterest organic and promoted pins, boards, metrics | 9 | `PINTEREST_ACCESS_TOKEN` |
 | `meta-ads-mcp-server` (Python) | Meta (Facebook and Instagram) ads: campaigns, ad sets, ads, insights | 49 | `FACEBOOK_ACCESS_TOKEN` |
+| `vividwalls-ops-mcp` (Python) | Orders → Pictorem, artwork profiles & search, pricing, UTM/pin drafts (the old n8n workflows) | 10 | `SHOPIFY_ADMIN_TOKEN` (see its README) |
 | `wordpress-mcp-server` (TypeScript) | WordPress blog `vividwalls.blog` ("Art of Space"): posts, pages, media | 56 | `WORDPRESS_URL`, `WORDPRESS_USERNAME`, `WORDPRESS_PASSWORD` (an application password) |
 
 Never commit tokens. Set them in your shell or in the MCP client config on your own machine.
