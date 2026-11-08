@@ -451,3 +451,14 @@ def test_keychain_read_failures_are_not_reported_as_missing(monkeypatch):
     monkeypatch.setattr(subprocess, "run", timeout)
     with pytest.raises(RuntimeError, match="timed out"):
         real.keychain_secret("svc")
+
+
+def test_keychain_lookup_rejects_unsafe_values(monkeypatch):
+    import importlib, subprocess
+    real = importlib.reload(config)
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **k: (_ for _ in ()).throw(AssertionError("must not run")))
+    for bad in ("svc; rm -rf ~", "-w", "a b", ""):
+        with pytest.raises(ValueError, match="invalid Keychain"):
+            real.keychain_secret(bad)
+    with pytest.raises(ValueError):
+        real.keychain_secret("vividwalls-shopify-admin", account="store.myshopify.com && x")

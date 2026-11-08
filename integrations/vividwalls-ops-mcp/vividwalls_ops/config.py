@@ -25,10 +25,17 @@ def keychain_secret(service: str, account: str | None = None) -> str:
     """A generic password from the macOS Keychain, or "" when there is no such item (or no
     Keychain, e.g. not on macOS). A Keychain that exists but cannot be read (locked, access
     denied, timed out) raises instead, so it is not mistaken for a missing token."""
+    import re
     import subprocess
+    # Only plain identifiers (our service names, a store domain or email) reach the command line,
+    # and none may start with "-", which `security` would read as an option.
+    for value in (service, account or "x"):
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._@-]{0,127}", value):
+            raise ValueError(f"invalid Keychain service or account: {value!r}")
     cmd = ["security", "find-generic-password", "-s", service, *(["-a", account] if account else []), "-w"]
     try:
-        done = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        # argv list with no shell, and both values validated above: nothing is interpreted.
+        done = subprocess.run(cmd, capture_output=True, text=True, timeout=10)  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
     except FileNotFoundError:
         return ""
     except subprocess.TimeoutExpired:
