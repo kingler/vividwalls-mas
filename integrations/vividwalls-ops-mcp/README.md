@@ -10,7 +10,7 @@ covered by tests.
 
 | n8n workflow (removed Oct 2026) | Now |
 |---|---|
-| E-commerce Order Fulfillment, Orders Fulfillment Agent, Pictorem Agent | `fulfillment_queue`, `pictorem_order_sheet`, `record_pictorem_submission`, `mark_fulfilled`, plus the `fulfill-order` playbook |
+| E-commerce Order Fulfillment, Orders Fulfillment Agent, Pictorem Agent | `fulfillment_queue`, `pictorem_quote_order`, `pictorem_submit_order`, `pictorem_order_status`, `mark_fulfilled` (Pictorem ArtFlow API), with `pictorem_order_sheet` and `record_pictorem_submission` as the manual fallback, plus the `fulfill-order` playbook |
 | Artwork Color Analysis (both versions) | The agent looks at the image, then `save_artwork_profile` validates the profile and stores it on the product. `unprofiled_artworks` lists what's left to do |
 | Database Integration & Search, Prompt-Chain Image Retrieval, Sales Agent (recommendations) | `search_artworks` (colour, mood, room, budget; best fit first, with reasons) |
 | Marketing Campaign Agent, Content Marketing Agent (+ Human Approval versions) | `campaign` playbook, `pin_drafts`, `utm_link`, plus the Pinterest, Meta ads and WordPress servers |
@@ -30,6 +30,11 @@ separate database.
 |---|---|
 | `fulfillment_queue` | No |
 | `pictorem_order_sheet` | No |
+| `pictorem_quote_order` | No (asks Pictorem to validate and price) |
+| `pictorem_submit_order` | Yes: places a Pictorem order (charges the card) and tags the Shopify order. `sandbox=true` uses Pictorem's test mode instead |
+| `pictorem_order_status` | No |
+| `pictorem_artworks` | No |
+| `set_print_file` | Yes: product metafield linking it to its Pictorem print file |
 | `record_pictorem_submission` | Yes: adds an order tag |
 | `mark_fulfilled` | Yes: creates the fulfillment and emails the customer |
 | `price_check` | No |
@@ -37,6 +42,16 @@ separate database.
 | `save_artwork_profile` | Yes: product metafields |
 | `search_artworks` | No |
 | `utm_link`, `pin_drafts` | No |
+
+**Pictorem ordering.** Orders go through Pictorem's ArtFlow API
+([docs](https://www.pictorem.com/artflow/0.1/docs)). Each Shopify product is linked to the file Pictorem
+prints with `set_print_file`: a Pictorem artwork ID (`vividwalls.pictorem_collection_id`, from
+`pictorem_artworks`) or a public https print file (`vividwalls.print_file_url`). Variants map to product
+codes as gallery wrap = `canvas|stretched|...|c15|imagewrap` and roll = `canvas|canvasroll|...`; Pictorem's
+sanitizer completes the code (hanging wire) and the tool re-validates the corrected code. A quote more
+than 10% above the pricing rule's expected cost, a missing print file, a non-US/Canada address or an
+existing `pictorem:` tag stops the order. The PO is `VW-<order number>`, so Pictorem rejects a second
+print of the same order and returns the first.
 
 **Order safety.** `pictorem_order_sheet` and `mark_fulfilled` refuse test, cancelled, unpaid and
 already-fulfilled orders. Order numbers must look like `#1009`. Tracking links must be https links
@@ -64,6 +79,12 @@ prepare drafts for the owner.
      integrations/vividwalls-ops-mcp/.venv/bin/python integrations/vividwalls-ops-mcp/server.py
    ```
    Leave out `VIVIDWALLS_ALLOW_WRITES=1` wherever the server should only ever draft.
+3. Pictorem API token: in Pictorem go to **My Account → API Key & Docs**, create a token, then store it
+   in the macOS Keychain (it is read at call time and never written to disk by the server):
+   ```bash
+   security add-generic-password -U -s vividwalls-pictorem-api -a "<your Pictorem email>" -w
+   ```
+   On other machines set `PICTOREM_ARTFLOW_KEY` instead.
 
 | Variable | Purpose | Default |
 |---|---|---|
@@ -71,11 +92,12 @@ prepare drafts for the owner.
 | `SHOPIFY_STORE_DOMAIN` | Store admin domain | `vividwalls-2.myshopify.com` |
 | `VIVIDWALLS_TEST_CUSTOMERS` | Comma-separated customer names whose orders are tests. The store owner's name (from Shopify) is always added | `Test User` |
 | `VIVIDWALLS_ALLOW_WRITES` | `1` lets confirmed writes through | off |
+| `PICTOREM_ARTFLOW_KEY` | Pictorem ArtFlow API token. If unset, read from the macOS Keychain item `vividwalls-pictorem-api` | none |
 
 ## Tests
 
 ```bash
 .venv/bin/python -m pytest -q tests
 ```
-The tests use a fake Shopify transport, so they need no token and make no network calls.
+The tests use fake Shopify and Pictorem transports, so they need no token and make no network calls.
 The GraphQL queries were checked against the live store (Admin API 2026-10).
