@@ -8,17 +8,27 @@ import httpx
 
 from mcp.server.fastmcp import FastMCP
 
-from vividwalls_ops import catalog, marketing, orders, pricing
+from vividwalls_ops import catalog, marketing, orders, pictorem, pricing
+from vividwalls_ops.pictorem import Pictorem
 from vividwalls_ops.shopify import Shopify, ShopifyError
 
 mcp = FastMCP("vividwalls-ops")
 _shop: Shopify | None = None
 
 
+_pic: Pictorem | None = None
+
+
 def shop() -> Shopify:
     global _shop
     _shop = _shop or Shopify()
     return _shop
+
+
+def pic() -> Pictorem:
+    global _pic
+    _pic = _pic or Pictorem()
+    return _pic
 
 
 def safe(fn):
@@ -47,8 +57,9 @@ def fulfillment_queue() -> list | dict:
 def pictorem_order_sheet(order_name: str) -> dict:
     """Build the exact Pictorem order sheet for one order (e.g. '#1009'): print file, format, size,
     quantity, ship-to address, packing note and expected cost. `ready` is false with `problems` if the
-    order must not be submitted (unpaid, test order, missing address, unreadable variant)."""
-    return orders.get_order_sheet(shop(), order_name if order_name.startswith("#") else f"#{order_name}")
+    order must not be submitted (unpaid, test order, missing address, unreadable variant, or already
+    placed with Pictorem). Enter `po` as the order's PO in Pictorem so the API never orders it again."""
+    return orders.get_order_sheet(shop(), order_name if order_name.startswith("#") else f"#{order_name}", pic())
 
 
 @mcp.tool()
@@ -68,6 +79,58 @@ def mark_fulfilled(order_id: str, tracking_number: str, tracking_url: str = "", 
     site (UPS, FedEx, USPS, DHL, Canada Post, Purolator, Pictorem); otherwise pass only carrier.
     Previews unless confirm=true and writes are switched on."""
     return orders.mark_fulfilled(shop(), order_id, tracking_number, tracking_url, carrier, notify_customer, confirm)
+
+
+# --- Pictorem ArtFlow API: automated ordering -------------------------------
+@mcp.tool()
+@safe
+def pictorem_quote_order(order_name: str, accept_quote: bool = False) -> dict:
+    """Validate and price an order (e.g. '#1009') with Pictorem's API without placing it: the exact
+    product codes, print files, your Pictorem cost per line and in total, and the expected cost from the
+    pricing rule. `ready` is false with `problems` when it must not be submitted (test/unpaid/fulfilled
+    order, already sent, no print file set, outside US/Canada, or a quote over 10% above expected)."""
+    return orders.quote_order(shop(), pic(), order_name, accept_quote)
+
+
+@mcp.tool()
+@safe
+def pictorem_submit_order(order_name: str, confirm: bool = False, approval_code: str = "",
+                          sandbox: bool = False, accept_quote: bool = False) -> dict:
+    """Place a paid Shopify order with Pictorem through its API and tag the Shopify order 'pictorem:<id>'.
+    This charges the business card. Without confirm it returns a preview with an approval_code; show the
+    preview to the owner and, only after they approve, call again with confirm=true and that approval_code.
+    If the order changed since the preview (address, items, print file, price) the code no longer matches
+    and nothing is ordered. Writes must also be switched on. sandbox=true sends it through Pictorem's test
+    mode instead (validated end to end, nothing created or charged). Safe to retry: the PO 'VW-<number>'
+    stops a second print of the same order."""
+    return orders.submit_order(shop(), pic(), order_name, confirm, sandbox, accept_quote, approval_code)
+
+
+@mcp.tool()
+@safe
+def pictorem_order_status(order_name: str = "", pictorem_order_id: str = "") -> dict:
+    """Pictorem status for a Shopify order number or a Pictorem order ID: order and production stage,
+    progress, tracking number and carrier. When `ready_to_mark_fulfilled` is true, call mark_fulfilled."""
+    return orders.pictorem_status(pic(), order_name, pictorem_order_id)
+
+
+@mcp.tool()
+@safe
+def pictorem_artworks(search: str = "") -> list | dict:
+    """Artworks on the Pictorem account (private albums included) with their collection IDs, to link a
+    Shopify product to its print file with set_print_file. Optional search filters by name."""
+    found = pictorem.artworks(pic())
+    words = search.lower().split()
+    return [a for a in found if all(w in a["name"].lower() for w in words)]
+
+
+@mcp.tool()
+@safe
+def set_print_file(product_id: str, collection_id: str = "", file_url: str = "", confirm: bool = False) -> dict:
+    """Link a Shopify product to the file Pictorem prints: a Pictorem artwork collection_id (from
+    pictorem_artworks) or a public https file_url. Exactly one. Orders for products without one are refused.
+    Previews unless confirm=true and writes are switched on."""
+    return orders.set_print_file(shop(), product_id, collection_id, file_url, confirm)
 
 
 # --- Pricing --------------------------------------------------------------

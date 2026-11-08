@@ -25,6 +25,32 @@ def writes_allowed() -> bool:
     return os.environ.get("VIVIDWALLS_ALLOW_WRITES") == "1"
 
 
+PICTOREM_API_BASE = "https://www.pictorem.com/artflow/0.1"
+# macOS Keychain item holding the Pictorem ArtFlow API token (created by the owner with
+# `security add-generic-password -U -s vividwalls-pictorem-api -a <email> -w`).
+PICTOREM_KEYCHAIN_SERVICE = "vividwalls-pictorem-api"
+
+
+def pictorem_api_key() -> str:
+    """ArtFlow token from PICTOREM_ARTFLOW_KEY, else the macOS Keychain. Never logged or returned."""
+    key = os.environ.get("PICTOREM_ARTFLOW_KEY", "").strip()
+    if key:
+        return key
+    try:
+        import subprocess
+        key = subprocess.run(
+            ["security", "find-generic-password", "-s", PICTOREM_KEYCHAIN_SERVICE, "-w"],
+            capture_output=True, text=True, timeout=10,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        key = ""
+    if not key:
+        raise RuntimeError(
+            "Pictorem API token not found: set PICTOREM_ARTFLOW_KEY or store it in the macOS Keychain "
+            f'as service "{PICTOREM_KEYCHAIN_SERVICE}".')
+    return key
+
+
 def test_customer_names() -> set[str]:
     """Customers whose orders are tests (CLAUDE.md rule 3). Comma-separated, case-insensitive."""
     raw = os.environ.get("VIVIDWALLS_TEST_CUSTOMERS", "Test User")
