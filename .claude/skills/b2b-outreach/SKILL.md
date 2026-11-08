@@ -18,7 +18,7 @@ description: Business development for VividWalls — research and qualify trade 
 2. **Qualify**: does their portfolio show modern or contemporary interiors with large wall
    spaces? Score A/B/C.
 3. **Draft** (Gmail drafts only): ≤120 words, a specific compliment on a recent project,
-   2 pieces that would suit their style (with links), the trade offer, and one easy CTA
+   2 pieces that would suit their style (pick them with `search_artworks`; link with `utm_link`), the trade offer, and one easy CTA
    ("want a curated set of 5 for your next project?").
 4. **Follow up**: day 3 (short nudge with a room mockup), day 8 (last note plus lookbook).
    Stop after 3 touches.
