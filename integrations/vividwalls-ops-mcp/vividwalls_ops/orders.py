@@ -459,8 +459,10 @@ def set_print_file(shop: Shopify, product_id: str, collection_id: str = "", file
         return {"applied": False, "errors": ["give exactly one of collection_id or file_url"]}
     if collection_id and not collection_id.isdigit():
         return {"applied": False, "errors": ["collection_id must be the numeric Pictorem artwork ID"]}
-    if file_url and (problem := pictorem.public_https_problem(file_url)):
+    if file_url and (problem := pictorem.public_https_problem(file_url, resolve=True)):
         return {"applied": False, "errors": [problem]}
+    if file_url and not file_type(file_url):
+        return {"applied": False, "errors": ["file_url must end in .jpg, .png or .tif (Pictorem needs the file type)"]}
     key, value, kind = (("pictorem_collection_id", collection_id, "single_line_text_field") if collection_id
                         else ("print_file_url", file_url, "url"))
     fields = [{"ownerId": product_id, "namespace": config.METAFIELD_NAMESPACE, "key": key, "type": kind,

@@ -4,6 +4,7 @@ Docs: https://www.pictorem.com/artflow/0.1/docs (OpenAPI at /artflow/0.1/openapi
 Every endpoint is an HTTPS POST with multipart form fields and an ArtFlowKey header."""
 import ipaddress
 import re
+import socket
 from typing import Any, Callable
 from urllib.parse import urlparse
 
@@ -56,7 +57,7 @@ class Pictorem:
     def file_problem(self, url: str) -> str | None:
         """Why Pictorem could not fetch a print-file URL, or None if it answers with a file.
         Checked at quote time so a private or broken link fails before an order is placed."""
-        if problem := public_https_problem(url):
+        if problem := public_https_problem(url, resolve=True):
             return problem
         try:
             resp = httpx.head(url, follow_redirects=True, timeout=20)
@@ -64,6 +65,10 @@ class Pictorem:
                 resp = httpx.get(url, headers={"Range": "bytes=0-0"}, follow_redirects=True, timeout=20)
         except httpx.HTTPError as e:
             return f"print file {url} is unreachable ({e})"
+        # A redirect must not land on a private host either.
+        for hop in [*resp.history, resp]:
+            if problem := public_https_problem(str(hop.url), resolve=True):
+                return f"print file redirects to a non-public address ({problem})"
         if resp.status_code not in (200, 206):
             return f"print file {url} answered HTTP {resp.status_code}; Pictorem cannot fetch it"
         kind = resp.headers.get("content-type", "").split(";")[0].strip().lower()
@@ -72,8 +77,10 @@ class Pictorem:
         return None
 
 
-def public_https_problem(url: str) -> str | None:
-    """Print files must be public https links: no private, loopback or link-local hosts."""
+def public_https_problem(url: str, resolve: bool = False) -> str | None:
+    """Print files must be public https links: no private, loopback or link-local hosts.
+    With resolve=True the hostname is looked up too, so a public-looking name that points at a
+    private address is refused."""
     parts = urlparse(str(url or "").strip())
     host = (parts.hostname or "").lower()
     if parts.scheme != "https" or not host:
@@ -81,10 +88,15 @@ def public_https_problem(url: str) -> str | None:
     if host == "localhost" or host.endswith((".local", ".internal", ".lan", ".home.arpa")):
         return f"print file host {host} is not public"
     try:
-        ip = ipaddress.ip_address(host)
+        ips = [ipaddress.ip_address(host)]
     except ValueError:
-        return None
-    if not ip.is_global:
+        if not resolve:
+            return None
+        try:
+            ips = [ipaddress.ip_address(info[4][0]) for info in socket.getaddrinfo(host, 443)]
+        except (OSError, ValueError):
+            return f"print file host {host} could not be resolved"
+    if any(not ip.is_global for ip in ips):
         return f"print file host {host} is not a public address"
     return None
 
