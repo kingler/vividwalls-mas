@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timezone
 
 import pytest
@@ -9,9 +10,9 @@ from vividwalls_ops.shopify import Shopify, ShopifyError
 NOW = datetime(2026, 11, 8, 12, 0, tzinfo=timezone.utc)
 
 
-def order(name, customer="Jane Buyer", created="2026-11-08T08:00:00Z", status="PAID", tags=(), variant="36x48 / Gallery Wrapped Stretched Canvas", price="315.94"):
+def order(name, customer="Jane Buyer", created="2026-11-08T08:00:00Z", status="PAID", tags=(), variant="36x48 / Gallery Wrapped Stretched Canvas", price="315.94", cancelled=None):
     return {
-        "id": f"gid://shopify/Order/{name}", "name": f"#{name}", "createdAt": created, "tags": list(tags),
+        "id": f"gid://shopify/Order/{name}", "name": f"#{name}", "createdAt": created, "cancelledAt": cancelled, "tags": list(tags),
         "displayFinancialStatus": status, "displayFulfillmentStatus": "UNFULFILLED",
         "customer": {"displayName": customer},
         "shippingAddress": {"name": customer, "address1": "1 Main St", "address2": None, "city": "Newark",
@@ -27,10 +28,10 @@ class FakeShop(Shopify):
     def __init__(self, responses):
         self.calls = []
         super().__init__(transport=self._answer)
-        self.responses = responses
+        self.responses = {"Owner": {"data": {"shop": {"shopOwnerName": "Store Owner"}}}, **responses}
 
     def _answer(self, query, variables):
-        op = query.split("(")[0].split()[-1]
+        op = re.search(r"(?:query|mutation)\s+(\w+)", query).group(1)
         self.calls.append((op, variables))
         return self.responses[op]
 
@@ -55,16 +56,18 @@ def test_test_orders_are_excluded(monkeypatch):
 
 def test_fulfillment_queue_marks_urgent_and_skips_tests(monkeypatch):
     monkeypatch.setenv("VIVIDWALLS_TEST_CUSTOMERS", "Test User")
-    shop = FakeShop({"Unfulfilled": {"data": {"orders": {"nodes": [
-        order("10", created="2026-11-06T08:00:00Z"),
+    shop = FakeShop({"Unfulfilled": {"data": {"orders": {"nodes": [   # newest first on purpose
         order("11", created="2026-11-08T10:00:00Z", tags=["pictorem:PX-1"]),
+        order("10", created="2026-11-06T08:00:00Z"),
         order("12", customer="Test User"),
+        order("13", customer="Store Owner"),          # shop owner: always a test order
+        order("14", cancelled="2026-11-07T00:00:00Z"),
     ]}}}})
     q = orders.fulfillment_queue(shop, now=NOW)
     assert [o["order"] for o in q] == ["#10", "#11"]
     assert q[0]["urgent"] and not q[1]["urgent"]
     assert q[1]["sent_to_pictorem"] and not q[0]["sent_to_pictorem"]
-    assert shop.calls[0][1]["q"] == "financial_status:paid fulfillment_status:unfulfilled"
+    assert ("Unfulfilled", {"q": "financial_status:paid fulfillment_status:unfulfilled"}) in shop.calls
 
 
 @pytest.mark.parametrize("title,size,fmt", [
@@ -115,17 +118,21 @@ def test_writes_need_confirm_and_switch(monkeypatch):
     assert r["applied"] and shop.calls == [("TagOrder", {"id": "gid://shopify/Order/1", "tags": ["pictorem:PX-9"]})]
 
 
+def order_with_fos(o):
+    return {"data": {"order": {**o, "fulfillmentOrders": {"nodes": [
+        {"id": "FO1", "status": "OPEN"}, {"id": "FO2", "status": "CLOSED"}]}}}}
+
+
 def test_mark_fulfilled_uses_open_fulfillment_orders(monkeypatch):
     monkeypatch.setenv("VIVIDWALLS_ALLOW_WRITES", "1")
     shop = FakeShop({
-        "FulfillmentOrders": {"data": {"order": {"name": "#30", "fulfillmentOrders": {"nodes": [
-            {"id": "FO1", "status": "OPEN"}, {"id": "FO2", "status": "CLOSED"}]}}}},
+        "OrderById": order_with_fos(order("30")),
         "Fulfill": {"data": {"fulfillmentCreate": {"fulfillment": {"id": "F1", "status": "SUCCESS",
                     "trackingInfo": [{"number": "1Z9"}]}, "userErrors": []}}},
     })
     r = orders.mark_fulfilled(shop, "gid://shopify/Order/30", "1Z9", carrier="UPS", confirm=True)
     assert r["applied"]
-    sent = shop.calls[1][1]["fulfillment"]
+    sent = [v for op, v in shop.calls if op == "Fulfill"][0]["fulfillment"]
     assert sent["lineItemsByFulfillmentOrder"] == [{"fulfillmentOrderId": "FO1"}]
     assert sent["trackingInfo"] == {"number": "1Z9", "company": "UPS"} and sent["notifyCustomer"] is True
 
@@ -196,8 +203,12 @@ def test_utm_and_pin_drafts():
     link = marketing.utm_link("https://vividwalls.co/products/noir-mosaic-no1?variant=1", "Pinterest", "Holiday 2026", content="Living Room")
     assert "variant=1" in link and "utm_source=pinterest" in link and "utm_campaign=holiday-2026" in link
     assert "utm_content=living-room" in link
-    pins = marketing.pin_drafts("Noir Mosaic no1", "https://vividwalls.co/products/noir-mosaic-no1", "holiday", ["living room", "office"])
+    pins = marketing.pin_drafts("Noir Mosaic no1", "https://vividwalls.co/products/noir-mosaic-no1", "holiday",
+                                ["living room", "office"], "https://cdn.shopify.com/s/files/room.png")
     assert len(pins) == 2 and all(len(p["title"]) <= 100 for p in pins)
+    assert {"board_id", "title", "description", "image_url", "link", "alt_text"} == set(pins[0])
+    with pytest.raises(ValueError):
+        marketing.pin_drafts("x", "https://vividwalls.co/p", "c", ["office"], "<placeholder>")
     assert "utm_content=office" in pins[1]["link"]
 
 
@@ -211,3 +222,56 @@ def test_server_tools_return_errors_instead_of_crashing(monkeypatch):
     monkeypatch.setattr(server, "_shop", None)
     monkeypatch.delenv("SHOPIFY_ADMIN_TOKEN", raising=False)
     assert "SHOPIFY_ADMIN_TOKEN" in server.unprofiled_artworks()["error"]
+
+
+# --- review fixes: eligibility, lookups and link safety -------------------
+@pytest.mark.parametrize("bad,reason", [
+    (dict(status="PENDING"), "not PAID"),
+    (dict(customer="Store Owner"), "test order"),
+    (dict(cancelled="2026-11-07T00:00:00Z"), "cancelled"),
+])
+def test_mark_fulfilled_refuses_ineligible_orders(monkeypatch, bad, reason):
+    monkeypatch.setenv("VIVIDWALLS_ALLOW_WRITES", "1")
+    shop = FakeShop({"OrderById": order_with_fos(order("40", **bad))})
+    r = orders.mark_fulfilled(shop, "gid://shopify/Order/40", "1Z9", confirm=True)
+    assert not r["applied"] and any(reason in e for e in r["errors"])
+    assert "Fulfill" not in [op for op, _ in shop.calls]
+
+
+@pytest.mark.parametrize("url,ok", [
+    ("https://www.ups.com/track?tracknum=1Z9", True),
+    ("https://tools.usps.com/go/TrackConfirmAction?tLabels=9", True),
+    ("http://www.ups.com/track", False),
+    ("https://ups.com.evil.example/track", False),
+    ("https://bit.ly/abc", False),
+])
+def test_tracking_url_policy(url, ok):
+    assert (orders.tracking_url_problem(url) is None) == ok
+
+
+def test_bad_tracking_url_is_rejected_before_any_lookup():
+    shop = FakeShop({})
+    r = orders.mark_fulfilled(shop, "gid://shopify/Order/1", "1Z9", tracking_url="https://bit.ly/x", confirm=True)
+    assert not r["applied"] and shop.calls == []
+
+
+def test_order_sheet_lookup_is_strict():
+    shop = FakeShop({"Unfulfilled": {"data": {"orders": {"nodes": [order("1009"), order("10090")]}}}})
+    assert "not an order number" in orders.get_order_sheet(shop, "1009 OR name:#1")["problems"][0]
+    assert shop.calls == []
+    sheet = orders.get_order_sheet(shop, "1009")
+    assert sheet["order"] == "#1009" and ("Unfulfilled", {"q": "name:#1009"}) in shop.calls
+
+
+def test_order_sheet_flags_cancelled_and_owner_orders():
+    shop = FakeShop({"Unfulfilled": {"data": {"orders": {"nodes": [order("50", cancelled="2026-11-07T00:00:00Z")]}}}})
+    assert "order was cancelled" in orders.get_order_sheet(shop, "#50")["problems"]
+    shop = FakeShop({"Unfulfilled": {"data": {"orders": {"nodes": [order("51", customer="Store Owner")]}}}})
+    assert any("test order" in p for p in orders.get_order_sheet(shop, "#51")["problems"])
+
+
+@pytest.mark.parametrize("pid", ["", "   ", "has space", "a" * 70])
+def test_blank_or_malformed_pictorem_ids_are_rejected(pid):
+    shop = FakeShop({})
+    r = orders.record_pictorem_submission(shop, "gid://shopify/Order/1", pid, confirm=True)
+    assert not r["applied"] and shop.calls == []

@@ -38,6 +38,10 @@ separate database.
 | `search_artworks` | No |
 | `utm_link`, `pin_drafts` | No |
 
+**Order safety.** `pictorem_order_sheet` and `mark_fulfilled` refuse test, cancelled, unpaid and
+already-fulfilled orders. Order numbers must look like `#1009`. Tracking links must be https links
+on a carrier site, because they go into customer emails.
+
 **Approval gate.** A store-changing tool only acts when it is called with `confirm=true`
 **and** the environment has `VIVIDWALLS_ALLOW_WRITES=1`. In every other case it returns
 exactly what it would change. Scheduled routines run without the switch, so they can only
@@ -51,10 +55,11 @@ prepare drafts for the owner.
    then install the app and copy the Admin API access token.
 2. Install and register:
    ```bash
-   cd integrations/vividwalls-ops-mcp && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+   # from the repository root
+   (cd integrations/vividwalls-ops-mcp && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt)
    claude mcp add vividwalls-ops \
      -e SHOPIFY_ADMIN_TOKEN=... \
-     -e VIVIDWALLS_TEST_CUSTOMERS="Test User,<your name>" \
+     -e VIVIDWALLS_TEST_CUSTOMERS="Test User" \
      -e VIVIDWALLS_ALLOW_WRITES=1 -- \
      integrations/vividwalls-ops-mcp/.venv/bin/python integrations/vividwalls-ops-mcp/server.py
    ```
@@ -64,7 +69,7 @@ prepare drafts for the owner.
 |---|---|---|
 | `SHOPIFY_ADMIN_TOKEN` | Admin API token (required for store tools) | none |
 | `SHOPIFY_STORE_DOMAIN` | Store admin domain | `vividwalls-2.myshopify.com` |
-| `VIVIDWALLS_TEST_CUSTOMERS` | Comma-separated customer names whose orders are tests | `Test User` |
+| `VIVIDWALLS_TEST_CUSTOMERS` | Comma-separated customer names whose orders are tests. The store owner's name (from Shopify) is always added | `Test User` |
 | `VIVIDWALLS_ALLOW_WRITES` | `1` lets confirmed writes through | off |
 
 ## Tests

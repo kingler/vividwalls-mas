@@ -16,8 +16,12 @@ def utm_link(url: str, source: str, campaign: str, medium: str = "social", conte
     return urlunparse(parts._replace(query=urlencode(q)))
 
 
-def pin_drafts(title: str, product_url: str, campaign: str, rooms: list[str], board_id: str = "") -> list[dict]:
-    """One pin per room angle, ready for the Pinterest server's create_pin after approval."""
+def pin_drafts(title: str, product_url: str, campaign: str, rooms: list[str], image_url: str,
+               board_id: str = "") -> list[dict]:
+    """One pin per room angle, with the arguments the Pinterest server's create_pin takes.
+    image_url must be a public https image (e.g. the product's room mockup on cdn.shopify.com)."""
+    if urlparse(image_url).scheme != "https":
+        raise ValueError("image_url must be a public https image URL")
     drafts = []
     for room in rooms[:5]:
         pin_title = f"{title}: large abstract wall art for the {room}"[:100]
@@ -27,6 +31,7 @@ def pin_drafts(title: str, product_url: str, campaign: str, rooms: list[str], bo
             "description": (f"{title} on gallery-wrapped canvas, ready to hang. Modern abstract wall art "
                             f"for the {room}. Shop sizes 24x36 to 53x72 at VividWalls.")[:500],
             "link": utm_link(product_url, "pinterest", campaign, medium="social", content=room),
-            "image": "<room mockup for this piece>",
+            "image_url": image_url,
+            "alt_text": f"{title} canvas wall art in a modern {room}",
         })
     return drafts

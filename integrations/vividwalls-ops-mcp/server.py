@@ -26,7 +26,7 @@ def safe(fn):
     def wrapper(*args, **kwargs):
         try:
             return fn(*args, **kwargs)
-        except (ShopifyError, RuntimeError) as e:
+        except (ShopifyError, RuntimeError, ValueError) as e:
             return {"error": str(e)}
         except httpx.HTTPError as e:
             return {"error": f"Shopify request failed: {e}"}
@@ -64,6 +64,8 @@ def record_pictorem_submission(order_id: str, pictorem_order_id: str, confirm: b
 def mark_fulfilled(order_id: str, tracking_number: str, tracking_url: str = "", carrier: str = "",
                    notify_customer: bool = True, confirm: bool = False) -> dict:
     """Mark a Shopify order fulfilled with Pictorem's tracking number (emails the customer by default).
+    Refuses test, cancelled, unpaid or already-fulfilled orders. tracking_url must be https on a carrier
+    site (UPS, FedEx, USPS, DHL, Canada Post, Purolator, Pictorem); otherwise pass only carrier.
     Previews unless confirm=true and writes are switched on."""
     return orders.mark_fulfilled(shop(), order_id, tracking_number, tracking_url, carrier, notify_customer, confirm)
 
@@ -114,10 +116,13 @@ def utm_link(url: str, source: str, campaign: str, medium: str = "social", conte
 
 
 @mcp.tool()
-def pin_drafts(title: str, product_url: str, campaign: str, rooms: list[str], board_id: str = "") -> list:
-    """Draft Pinterest pins (one per room angle) with UTM links, for the pinterest server's create_pin
-    after the owner approves."""
-    return marketing.pin_drafts(title, product_url, campaign, rooms, board_id)
+@safe
+def pin_drafts(title: str, product_url: str, campaign: str, rooms: list[str], image_url: str,
+               board_id: str = "") -> list | dict:
+    """Draft Pinterest pins (one per room angle) with UTM links and the exact arguments of the
+    pinterest server's create_pin. image_url: public https image (e.g. a room mockup on cdn.shopify.com).
+    Publish only after the owner approves."""
+    return marketing.pin_drafts(title, product_url, campaign, rooms, image_url, board_id)
 
 
 if __name__ == "__main__":
