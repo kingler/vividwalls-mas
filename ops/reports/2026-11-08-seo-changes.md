@@ -1,8 +1,10 @@
 # SEO Rewrites — Draft for Approval (2026-11-08)
 
 Drafted with the `optimize-listing` playbook from live Shopify data pulled 2026-11-08
-(37 active products, 255 images). **Nothing has been changed in the store.** Approve,
-edit or reject each section and Claude applies it in batches of 10.
+(37 active products, 255 images).
+
+> **Status (2026-11-08):** sections 1 and 4 were approved and are **live**. See
+> `2026-11-08-seo-applied.md`. Sections 2, 3 and 5 are still drafts awaiting approval.
 Machine-readable version: `ops/reports/2026-11-08-seo-changes.json`.
 
 ## Summary
