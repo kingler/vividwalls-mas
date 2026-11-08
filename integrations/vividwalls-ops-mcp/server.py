@@ -57,8 +57,9 @@ def fulfillment_queue() -> list | dict:
 def pictorem_order_sheet(order_name: str) -> dict:
     """Build the exact Pictorem order sheet for one order (e.g. '#1009'): print file, format, size,
     quantity, ship-to address, packing note and expected cost. `ready` is false with `problems` if the
-    order must not be submitted (unpaid, test order, missing address, unreadable variant)."""
-    return orders.get_order_sheet(shop(), order_name if order_name.startswith("#") else f"#{order_name}")
+    order must not be submitted (unpaid, test order, missing address, unreadable variant, or already
+    placed with Pictorem). Enter `po` as the order's PO in Pictorem so the API never orders it again."""
+    return orders.get_order_sheet(shop(), order_name if order_name.startswith("#") else f"#{order_name}", pic())
 
 
 @mcp.tool()
@@ -93,14 +94,16 @@ def pictorem_quote_order(order_name: str, accept_quote: bool = False) -> dict:
 
 @mcp.tool()
 @safe
-def pictorem_submit_order(order_name: str, confirm: bool = False, sandbox: bool = False,
-                          accept_quote: bool = False) -> dict:
+def pictorem_submit_order(order_name: str, confirm: bool = False, approval_code: str = "",
+                          sandbox: bool = False, accept_quote: bool = False) -> dict:
     """Place a paid Shopify order with Pictorem through its API and tag the Shopify order 'pictorem:<id>'.
-    This charges the business card. Previews unless confirm=true and writes are switched on; call with
-    confirm=true only after the owner approves the preview. sandbox=true sends it through Pictorem's test
+    This charges the business card. Without confirm it returns a preview with an approval_code; show the
+    preview to the owner and, only after they approve, call again with confirm=true and that approval_code.
+    If the order changed since the preview (address, items, print file, price) the code no longer matches
+    and nothing is ordered. Writes must also be switched on. sandbox=true sends it through Pictorem's test
     mode instead (validated end to end, nothing created or charged). Safe to retry: the PO 'VW-<number>'
     stops a second print of the same order."""
-    return orders.submit_order(shop(), pic(), order_name, confirm, sandbox, accept_quote)
+    return orders.submit_order(shop(), pic(), order_name, confirm, sandbox, accept_quote, approval_code)
 
 
 @mcp.tool()

@@ -50,8 +50,15 @@ prints with `set_print_file`: a Pictorem artwork ID (`vividwalls.pictorem_collec
 codes as gallery wrap = `canvas|stretched|...|c15|imagewrap` and roll = `canvas|canvasroll|...`; Pictorem's
 sanitizer completes the code (hanging wire) and the tool re-validates the corrected code. A quote more
 than 10% above the pricing rule's expected cost, a missing print file, a non-US/Canada address or an
-existing `pictorem:` tag stops the order. The PO is `VW-<order number>`, so Pictorem rejects a second
-print of the same order and returns the first.
+existing `pictorem:` tag stops the order, as does an order Pictorem already holds under its PO. The PO
+is `VW-<order number>`, so Pictorem rejects a second print of the same order and returns the first. The
+cost check uses the price the customer paid after discounts. Orders over 50 line items are refused.
+Print-file links must be public https and are checked for a reachable image at quote time; setting one
+kind of print source clears the other.
+
+**Approval code.** The submit preview carries an `approval_code`, a fingerprint of the PO, ship-to,
+lines and total. `confirm=true` must present that code; if the order changed since the owner approved
+the preview, the codes differ and nothing is ordered.
 
 **Order safety.** `pictorem_order_sheet` and `mark_fulfilled` refuse test, cancelled, unpaid and
 already-fulfilled orders. Order numbers must look like `#1009`. Tracking links must be https links

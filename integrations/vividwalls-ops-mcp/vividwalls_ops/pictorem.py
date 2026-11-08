@@ -2,8 +2,10 @@
 
 Docs: https://www.pictorem.com/artflow/0.1/docs (OpenAPI at /artflow/0.1/openapi/).
 Every endpoint is an HTTPS POST with multipart form fields and an ArtFlowKey header."""
+import ipaddress
 import re
 from typing import Any, Callable
+from urllib.parse import urlparse
 
 import httpx
 
@@ -50,6 +52,41 @@ class Pictorem:
     def call(self, endpoint: str, fields: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
         clean = {k: str(v) for k, v in (fields or {}).items() if v is not None and v != ""}
         return self._transport(endpoint, clean)
+
+    def file_problem(self, url: str) -> str | None:
+        """Why Pictorem could not fetch a print-file URL, or None if it answers with a file.
+        Checked at quote time so a private or broken link fails before an order is placed."""
+        if problem := public_https_problem(url):
+            return problem
+        try:
+            resp = httpx.head(url, follow_redirects=True, timeout=20)
+            if resp.status_code in (403, 405):  # some hosts refuse HEAD; ask for one byte instead
+                resp = httpx.get(url, headers={"Range": "bytes=0-0"}, follow_redirects=True, timeout=20)
+        except httpx.HTTPError as e:
+            return f"print file {url} is unreachable ({e})"
+        if resp.status_code not in (200, 206):
+            return f"print file {url} answered HTTP {resp.status_code}; Pictorem cannot fetch it"
+        kind = resp.headers.get("content-type", "").split(";")[0].strip().lower()
+        if kind and not (kind.startswith("image/") or kind in ("application/octet-stream", "binary/octet-stream")):
+            return f"print file {url} is {kind}, not an image"
+        return None
+
+
+def public_https_problem(url: str) -> str | None:
+    """Print files must be public https links: no private, loopback or link-local hosts."""
+    parts = urlparse(str(url or "").strip())
+    host = (parts.hostname or "").lower()
+    if parts.scheme != "https" or not host:
+        return "print file must be a public https link"
+    if host == "localhost" or host.endswith((".local", ".internal", ".lan", ".home.arpa")):
+        return f"print file host {host} is not public"
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return None
+    if not ip.is_global:
+        return f"print file host {host} is not a public address"
+    return None
 
 
 def errors_of(body: dict[str, Any]) -> list[str]:
@@ -143,6 +180,17 @@ def send_order(pic: Pictorem, po: str, delivery: dict, lines: list[dict], commen
         raise PictoremError(f"Pictorem refused the order ({body.get('failedstep') or status}): "
                             f"{errors_of(body)}{f' {detail}' if detail else ''}")
     return {"orderid": body.get("orderid"), "duplicate": False, "testmode": testmode}
+
+
+def find_order_by_po(pic: Pictorem, po: str) -> dict | None:
+    """The Pictorem order carrying our PO, or None if there is none. Used before quoting, submitting
+    or falling back to the dashboard, so an order Pictorem already accepted is never placed twice."""
+    status, body = pic.call("getorderstatus", {"po": po})
+    if status == 200 and body.get("status") and body.get("order"):
+        return body["order"]
+    if any("not found" in e.lower() for e in errors_of(body)) or status == 404:
+        return None
+    raise PictoremError(f"could not check Pictorem for PO {po}: {errors_of(body) or status}")
 
 
 def order_status(pic: Pictorem, orderid: str = "", po: str = "") -> dict:

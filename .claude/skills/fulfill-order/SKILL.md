@@ -24,10 +24,13 @@ approves each one because it charges the business card.
    - test, cancelled, unpaid, already fulfilled or already sent: do not order.
 3. Optional dry run: `pictorem_submit_order("#NNNN", sandbox=true)` sends the order through
    Pictorem's test mode (validated end to end, nothing created or charged).
-4. `pictorem_submit_order("#NNNN")` returns the preview: PO, ship-to, lines and total. Show it to
-   the owner. After an explicit yes, call it again with `confirm=true`. It places the order and tags
-   the Shopify order `pictorem:<id>`. The PO `VW-<number>` makes a retry safe: Pictorem returns the
-   existing order instead of printing twice.
+4. `pictorem_submit_order("#NNNN")` returns the preview: PO, ship-to, lines, total and an
+   `approval_code`. Show it to the owner. After an explicit yes, call it again with `confirm=true` and
+   that `approval_code`. If anything changed since the preview, the code no longer matches and nothing
+   is ordered: show the new preview instead. It places the order and tags the Shopify order
+   `pictorem:<id>`; if the tag fails, the result says so with a `warning` and the order ID to record.
+   The PO `VW-<number>` makes a retry safe: Pictorem returns the existing order instead of printing
+   twice, and quoting refuses an order Pictorem already holds.
 5. Draft the customer confirmation email as a Gmail draft, not sent: a thank-you, the printing
    timeline (Pictorem production plus shipping, typically 7-12 business days) and what to expect.
 6. Check progress with `pictorem_order_status("#NNNN")`. When `ready_to_mark_fulfilled` is true, call
@@ -36,7 +39,9 @@ approves each one because it charges the business card.
 
 ## Manual fallback
 If the API is down or an order is outside US/Canada, `pictorem_order_sheet("#NNNN")` gives the sheet
-the owner enters in the Pictorem pro dashboard; afterwards record it with
+the owner enters in the Pictorem pro dashboard. Enter its `po` (`VW-<number>`) as the order's PO in
+Pictorem so the API never orders it again. If a submit failed with a network error, run
+`pictorem_order_status` first: the order may already be at Pictorem. Afterwards record it with
 `record_pictorem_submission(order_id, pictorem_order_id)`.
 
 ## Guardrails
