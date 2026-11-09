@@ -414,10 +414,97 @@ def test_shopify_token_comes_from_env_then_this_stores_keychain_item(monkeypatch
 
     monkeypatch.setattr(config, "keychain_secret", fake)
     assert config.shopify_token() == "shpat_kc"
-    assert seen == [("vividwalls-shopify-admin", "vividwalls-2.myshopify.com")]
+    assert seen == [("vividwalls-shopify-client-id", "vividwalls-2.myshopify.com"),
+                    ("vividwalls-shopify-client-secret", "vividwalls-2.myshopify.com"),
+                    ("vividwalls-shopify-admin", "vividwalls-2.myshopify.com")]
     monkeypatch.setenv("SHOPIFY_STORE_DOMAIN", "other-store.myshopify.com")
     with pytest.raises(RuntimeError, match='account "other-store.myshopify.com"'):
         config.shopify_token()
+
+
+class _TokenResp:
+    def __init__(self, status, body):
+        self.status_code, self._body, self.text = status, body, str(body)
+
+    def json(self):
+        return self._body
+
+
+def _client_credentials_keychain(monkeypatch, domain="vividwalls-2.myshopify.com"):
+    items = {("vividwalls-shopify-client-id", domain): "cid",
+             ("vividwalls-shopify-client-secret", domain): "shpss_secret"}
+    monkeypatch.setattr(config, "keychain_secret", lambda service, account=None: items.get((service, account), ""))
+
+
+def test_shopify_token_from_client_credentials_is_exchanged_and_cached(monkeypatch):
+    import httpx
+    _client_credentials_keychain(monkeypatch)
+    calls = []
+
+    def fake_post(url, data=None, timeout=None, **k):
+        calls.append((url, data))
+        return _TokenResp(200, {"access_token": f"shpat_{len(calls)}", "expires_in": 86399})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    assert config.shopify_token() == "shpat_1"
+    assert config.shopify_token() == "shpat_1"  # cached, no second exchange
+    assert calls == [("https://vividwalls-2.myshopify.com/admin/oauth/access_token",
+                      {"grant_type": "client_credentials", "client_id": "cid", "client_secret": "shpss_secret"})]
+    config.forget_shopify_token()
+    assert config.shopify_token() == "shpat_2"
+
+
+def test_shopify_token_is_refreshed_before_it_expires(monkeypatch):
+    import httpx
+    import time
+    _client_credentials_keychain(monkeypatch)
+    n = []
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: (n.append(1), _TokenResp(
+        200, {"access_token": f"shpat_{len(n)}", "expires_in": 86399}))[1])
+    now = [1_000_000.0]
+    monkeypatch.setattr(time, "time", lambda: now[0])
+    assert config.shopify_token() == "shpat_1"
+    now[0] += 86399 - config.TOKEN_REFRESH_MARGIN - 1
+    assert config.shopify_token() == "shpat_1"
+    now[0] += 2
+    assert config.shopify_token() == "shpat_2"
+
+
+def test_shopify_client_credentials_env_wins_over_keychain_and_errors_are_clear(monkeypatch):
+    import httpx
+    _client_credentials_keychain(monkeypatch)
+    monkeypatch.setenv("SHOPIFY_CLIENT_ID", "env-id")
+    monkeypatch.setenv("SHOPIFY_CLIENT_SECRET", "env-secret")
+    seen = []
+    monkeypatch.setattr(httpx, "post", lambda url, data=None, **k: (seen.append(data), _TokenResp(
+        400, {"error": "invalid_client"}))[1])
+    with pytest.raises(RuntimeError, match=r"token request failed \(HTTP 400\)") as err:
+        config.shopify_token()
+    assert seen[0]["client_id"] == "env-id" and "env-secret" not in str(err.value)
+    monkeypatch.delenv("SHOPIFY_CLIENT_SECRET")
+    monkeypatch.setattr(config, "keychain_secret", lambda service, account=None: "")
+    with pytest.raises(RuntimeError, match="incomplete"):
+        config.shopify_token()
+
+
+def test_shopify_client_retries_once_with_a_new_token_after_401(monkeypatch):
+    import httpx
+    from vividwalls_ops.shopify import Shopify
+    tokens = iter(["shpat_old", "shpat_new"])
+    monkeypatch.setattr(config, "shopify_token", lambda: next(tokens))
+    forgot = []
+    monkeypatch.setattr(config, "forget_shopify_token", lambda: forgot.append(1))
+    sent = []
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        sent.append(headers["X-Shopify-Access-Token"])
+        status = 401 if len(sent) == 1 else 200
+        return httpx.Response(status, json={"data": {"shop": {"name": "VividWalls"}}},
+                              request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    assert Shopify().run("{ shop { name } }") == {"shop": {"name": "VividWalls"}}
+    assert sent == ["shpat_old", "shpat_new"] and forgot == [1]
 
 
 class _Done:

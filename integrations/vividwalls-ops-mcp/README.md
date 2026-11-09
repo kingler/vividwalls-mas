@@ -71,14 +71,17 @@ prepare drafts for the owner.
 
 ## Setup
 
-1. In Shopify admin, go to **Settings → Apps → Develop apps** and create an app. Grant the
-   Admin API scopes `read_orders`, `write_orders`, `read_products`, `write_products`,
-   `read_merchant_managed_fulfillment_orders` and `write_merchant_managed_fulfillment_orders`,
-   then install the app and copy the Admin API access token.
-2. Store the token in the macOS Keychain (the server reads it at call time, so no config file
-   holds it), then install and register:
+1. In the Shopify Dev Dashboard (dev.shopify.com), create an app for the store. Release a version
+   whose Admin API scopes are `read_orders`, `write_orders`, `read_products`, `write_products`,
+   `read_merchant_managed_fulfillment_orders` and `write_merchant_managed_fulfillment_orders`
+   (add the matching `assigned_fulfillment_orders` and `fulfillments` scopes if needed), then
+   install the app on the store.
+2. Store the app's **Client ID** and **Client secret** in the macOS Keychain (the server reads them
+   at call time and exchanges them for an access token that lasts about a day, so no config file
+   holds a secret), then install and register:
    ```bash
-   security add-generic-password -U -s vividwalls-shopify-admin -a vividwalls-2.myshopify.com -w
+   security add-generic-password -U -s vividwalls-shopify-client-id -a vividwalls-2.myshopify.com -w
+   security add-generic-password -U -s vividwalls-shopify-client-secret -a vividwalls-2.myshopify.com -w
    # from the repository root
    (cd integrations/vividwalls-ops-mcp && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt)
    claude mcp add vividwalls-ops \
@@ -88,7 +91,9 @@ prepare drafts for the owner.
    ```
    MABOS agents use the same server through its `vividwallsOps` plugin setting (command, args, cwd,
    env); MABOS then asks for operator approval on every confirmed order, fulfillment and store change.
-   On machines without a Keychain, pass `-e SHOPIFY_ADMIN_TOKEN=...` instead.
+   On machines without a Keychain, pass `-e SHOPIFY_CLIENT_ID=... -e SHOPIFY_CLIENT_SECRET=...` instead.
+   An older custom app made under **Settings → Apps → Develop apps** has a fixed `shpat_` token instead:
+   store it as Keychain service `vividwalls-shopify-admin` (same account) or set `SHOPIFY_ADMIN_TOKEN`.
    Leave out `VIVIDWALLS_ALLOW_WRITES=1` wherever the server should only ever draft.
 3. Pictorem API token: in Pictorem go to **My Account → API Key & Docs**, create a token, then store it
    in the macOS Keychain (it is read at call time and never written to disk by the server):
@@ -99,7 +104,8 @@ prepare drafts for the owner.
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `SHOPIFY_ADMIN_TOKEN` | Admin API token. If unset, read from the macOS Keychain item `vividwalls-shopify-admin` | none |
+| `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET` | Dev Dashboard app credentials, exchanged for a short-lived access token. If unset, read from the Keychain items `vividwalls-shopify-client-id` and `vividwalls-shopify-client-secret` | none |
+| `SHOPIFY_ADMIN_TOKEN` | Fixed Admin API token (older custom apps). Used first when set; otherwise the Keychain item `vividwalls-shopify-admin` is the last fallback | none |
 | `SHOPIFY_STORE_DOMAIN` | Store admin domain | `vividwalls-2.myshopify.com` |
 | `VIVIDWALLS_TEST_CUSTOMERS` | Comma-separated customer names whose orders are tests. The store owner's name (from Shopify) is always added | `Test User` |
 | `VIVIDWALLS_ALLOW_WRITES` | `1` lets confirmed writes through | off |
