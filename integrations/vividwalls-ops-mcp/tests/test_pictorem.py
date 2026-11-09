@@ -414,10 +414,157 @@ def test_shopify_token_comes_from_env_then_this_stores_keychain_item(monkeypatch
 
     monkeypatch.setattr(config, "keychain_secret", fake)
     assert config.shopify_token() == "shpat_kc"
-    assert seen == [("vividwalls-shopify-admin", "vividwalls-2.myshopify.com")]
+    assert seen == [("vividwalls-shopify-client-id", "vividwalls-2.myshopify.com"),
+                    ("vividwalls-shopify-client-secret", "vividwalls-2.myshopify.com"),
+                    ("vividwalls-shopify-admin", "vividwalls-2.myshopify.com")]
     monkeypatch.setenv("SHOPIFY_STORE_DOMAIN", "other-store.myshopify.com")
     with pytest.raises(RuntimeError, match='account "other-store.myshopify.com"'):
         config.shopify_token()
+
+
+class _TokenResp:
+    def __init__(self, status, body):
+        self.status_code, self._body, self.text = status, body, str(body)
+
+    def json(self):
+        return self._body
+
+
+def _client_credentials_keychain(monkeypatch, domain="vividwalls-2.myshopify.com"):
+    items = {("vividwalls-shopify-client-id", domain): "cid",
+             ("vividwalls-shopify-client-secret", domain): "shpss_secret"}
+    monkeypatch.setattr(config, "keychain_secret", lambda service, account=None: items.get((service, account), ""))
+
+
+def test_shopify_token_from_client_credentials_is_exchanged_and_cached(monkeypatch):
+    import httpx
+    _client_credentials_keychain(monkeypatch)
+    calls = []
+
+    def fake_post(url, data=None, timeout=None, **k):
+        calls.append((url, data))
+        return _TokenResp(200, {"access_token": f"shpat_{len(calls)}", "expires_in": 86399})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    assert config.shopify_token() == "shpat_1"
+    assert config.shopify_token() == "shpat_1"  # cached, no second exchange
+    assert calls == [("https://vividwalls-2.myshopify.com/admin/oauth/access_token",
+                      {"grant_type": "client_credentials", "client_id": "cid", "client_secret": "shpss_secret"})]
+    assert config.forget_shopify_token("shpat_unknown") is False
+    assert config.forget_shopify_token("shpat_1") is True
+    assert config.shopify_token() == "shpat_2"
+
+
+def test_shopify_token_is_refreshed_before_it_expires(monkeypatch):
+    import httpx
+    import time
+    _client_credentials_keychain(monkeypatch)
+    n = []
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: (n.append(1), _TokenResp(
+        200, {"access_token": f"shpat_{len(n)}", "expires_in": 86399}))[1])
+    now = [1_000_000.0]
+    monkeypatch.setattr(time, "time", lambda: now[0])
+    assert config.shopify_token() == "shpat_1"
+    now[0] += 86399 - config.TOKEN_REFRESH_MARGIN - 1
+    assert config.shopify_token() == "shpat_1"
+    now[0] += 2
+    assert config.shopify_token() == "shpat_2"
+
+
+def test_shopify_client_credentials_env_wins_over_keychain_and_errors_are_clear(monkeypatch):
+    import httpx
+    _client_credentials_keychain(monkeypatch)
+    monkeypatch.setenv("SHOPIFY_CLIENT_ID", "env-id")
+    monkeypatch.setenv("SHOPIFY_CLIENT_SECRET", "env-secret")
+    seen = []
+    monkeypatch.setattr(httpx, "post", lambda url, data=None, **k: (seen.append(data), _TokenResp(
+        400, {"error": "invalid_client"}))[1])
+    with pytest.raises(RuntimeError, match=r"token request failed \(HTTP 400\)") as err:
+        config.shopify_token()
+    assert seen[0]["client_id"] == "env-id" and "env-secret" not in str(err.value)
+    # One env value never pairs with the Keychain's other half (possibly another app's).
+    monkeypatch.delenv("SHOPIFY_CLIENT_SECRET")
+    with pytest.raises(RuntimeError, match="incomplete in SHOPIFY_CLIENT_ID"):
+        config.shopify_token()
+    monkeypatch.delenv("SHOPIFY_CLIENT_ID")
+    monkeypatch.setattr(config, "keychain_secret",
+                        lambda service, account=None: "cid" if service == "vividwalls-shopify-client-id" else "")
+    with pytest.raises(RuntimeError, match="incomplete in Keychain"):
+        config.shopify_token()
+
+
+def test_client_credentials_win_over_a_leftover_fixed_token(monkeypatch):
+    import httpx
+    _client_credentials_keychain(monkeypatch)
+    monkeypatch.setenv("SHOPIFY_ADMIN_TOKEN", "shpat_disabled")
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: _TokenResp(200, {"access_token": "shpat_new", "expires_in": 86399}))
+    assert config.shopify_token() == "shpat_new"
+
+
+def test_cached_token_is_not_reused_after_the_credentials_change(monkeypatch):
+    import httpx
+    n = []
+    monkeypatch.setattr(httpx, "post", lambda url, data=None, **k: (n.append(data["client_id"]), _TokenResp(
+        200, {"access_token": f"shpat_{data['client_id']}", "expires_in": 86399}))[1])
+    monkeypatch.setenv("SHOPIFY_CLIENT_ID", "app1")
+    monkeypatch.setenv("SHOPIFY_CLIENT_SECRET", "s1")
+    assert config.shopify_token() == "shpat_app1"
+    monkeypatch.setenv("SHOPIFY_CLIENT_ID", "app2")
+    monkeypatch.setenv("SHOPIFY_CLIENT_SECRET", "s2")
+    assert config.shopify_token() == "shpat_app2"
+    assert n == ["app1", "app2"]
+
+
+@pytest.mark.parametrize("bad", ["evil.example.com", "vividwalls.myshopify.com.evil.io", "-x.myshopify.com",
+                                 "a.myshopify.com/path", "a b.myshopify.com"])
+def test_store_domain_must_be_a_myshopify_host(monkeypatch, bad):
+    import httpx
+    monkeypatch.setenv("SHOPIFY_STORE_DOMAIN", bad)
+    monkeypatch.setenv("SHOPIFY_CLIENT_ID", "cid")
+    monkeypatch.setenv("SHOPIFY_CLIENT_SECRET", "secret")
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: pytest.fail("credentials sent to an untrusted host"))
+    with pytest.raises(ValueError, match="myshopify.com"):
+        config.shopify_token()
+
+
+def _graphql_responses(monkeypatch, statuses):
+    import httpx
+    sent = []
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        sent.append(headers["X-Shopify-Access-Token"])
+        return httpx.Response(statuses[len(sent) - 1], json={"data": {"shop": {"name": "VividWalls"}}},
+                              request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    return sent
+
+
+def test_shopify_client_retries_once_with_a_new_token_after_401(monkeypatch):
+    from vividwalls_ops.shopify import Shopify
+    tokens = iter(["shpat_old", "shpat_new"])
+    monkeypatch.setattr(config, "shopify_token", lambda: next(tokens))
+    rejected = []
+    monkeypatch.setattr(config, "forget_shopify_token", lambda t: (rejected.append(t), True)[1])
+    sent = _graphql_responses(monkeypatch, [401, 200])
+    assert Shopify().run("{ shop { name } }") == {"shop": {"name": "VividWalls"}}
+    assert sent == ["shpat_old", "shpat_new"] and rejected == ["shpat_old"]
+
+
+def test_fixed_token_is_not_retried_after_401(monkeypatch):
+    import httpx
+    from vividwalls_ops.shopify import Shopify
+    monkeypatch.setenv("SHOPIFY_ADMIN_TOKEN", "shpat_fixed")
+    sent = _graphql_responses(monkeypatch, [401, 200])
+    with pytest.raises(httpx.HTTPStatusError):
+        Shopify().run("{ shop { name } }")
+    assert sent == ["shpat_fixed"]
+
+
+def test_rejecting_an_old_token_keeps_a_newer_cached_one(monkeypatch):
+    config._issued_tokens[("vividwalls-2.myshopify.com", "cid", "f")] = ("shpat_new", float("inf"))
+    assert config.forget_shopify_token("shpat_old") is False
+    assert config._issued_tokens[("vividwalls-2.myshopify.com", "cid", "f")][0] == "shpat_new"
 
 
 class _Done:

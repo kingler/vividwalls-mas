@@ -21,12 +21,21 @@ class Shopify:
 
     def _http(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
         url = f"https://{config.shopify_domain()}/admin/api/{config.SHOPIFY_API_VERSION}/graphql.json"
-        resp = httpx.post(
-            url,
-            json={"query": query, "variables": variables},
-            headers={"X-Shopify-Access-Token": config.shopify_token()},
-            timeout=30,
-        )
+
+        def post(token: str) -> httpx.Response:
+            return httpx.post(
+                url,
+                json={"query": query, "variables": variables},
+                headers={"X-Shopify-Access-Token": token},
+                timeout=30,
+            )
+
+        token = config.shopify_token()
+        resp = post(token)
+        if resp.status_code == 401 and config.forget_shopify_token(token):
+            # A cached short-lived token was revoked or expired early: ask for a new one, once.
+            # Fixed tokens are not retried, since asking again would return the same token.
+            resp = post(config.shopify_token())
         resp.raise_for_status()
         return resp.json()
 

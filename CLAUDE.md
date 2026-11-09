@@ -22,7 +22,7 @@ Echoes, etc.) as ready-to-hang gallery-wrapped canvas and canvas rolls in three 
 |---|---|---|
 | Products, orders, customers, discounts, analytics | Shopify | Shopify MCP connector (`get-shop-info`, `list-orders`, `run-analytics-query`, GraphQL tools) |
 | Printing & shipping | Pictorem (pro account) | ArtFlow API through `vividwalls-ops`: `pictorem_quote_order`, `pictorem_submit_order` (owner approves each order), `pictorem_order_status`. Manual fallback: `pictorem_order_sheet` |
-| Order queue, artwork profiles & search, pricing checks | VividWalls Ops | `integrations/vividwalls-ops-mcp` (local MCP server: the old n8n workflows as functions). It calls the Shopify Admin API directly with its own token, so it also works in scheduled runs; use it rather than the connector for these tasks |
+| Order queue, artwork profiles & search, pricing checks | VividWalls Ops | `integrations/vividwalls-ops-mcp` (local MCP server: the old n8n workflows as functions). It calls the Shopify Admin API directly with its own app credentials, so it also works in scheduled runs; use it rather than the connector for these tasks |
 | Email, calendar, docs | Gmail, Google Calendar, Google Drive, Notion | MCP connectors |
 | Ad & social creative | Higgsfield | MCP connector (images, video, room mockups) |
 | Pinterest (organic + promoted pins) | Pinterest API | `integrations/pinterest-mcp-server` (local MCP server) |
