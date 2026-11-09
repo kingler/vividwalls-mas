@@ -105,8 +105,8 @@ prepare drafts for the owner.
 | Variable | Purpose | Default |
 |---|---|---|
 | `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET` | Dev Dashboard app credentials, exchanged for a short-lived access token. If unset, read from the Keychain items `vividwalls-shopify-client-id` and `vividwalls-shopify-client-secret` | none |
-| `SHOPIFY_ADMIN_TOKEN` | Fixed Admin API token (older custom apps). Used first when set; otherwise the Keychain item `vividwalls-shopify-admin` is the last fallback | none |
-| `SHOPIFY_STORE_DOMAIN` | Store admin domain | `vividwalls-2.myshopify.com` |
+| `SHOPIFY_ADMIN_TOKEN` | Fixed Admin API token (older custom apps). Used only when no client credentials are configured; the Keychain item `vividwalls-shopify-admin` is the last fallback | none |
+| `SHOPIFY_STORE_DOMAIN` | Store admin domain (must be `<store>.myshopify.com`) | `vividwalls-2.myshopify.com` |
 | `VIVIDWALLS_TEST_CUSTOMERS` | Comma-separated customer names whose orders are tests. The store owner's name (from Shopify) is always added | `Test User` |
 | `VIVIDWALLS_ALLOW_WRITES` | `1` lets confirmed writes through | off |
 | `PICTOREM_ARTFLOW_KEY` | Pictorem ArtFlow API token. If unset, read from the macOS Keychain item `vividwalls-pictorem-api` | none |

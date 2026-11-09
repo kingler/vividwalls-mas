@@ -10,7 +10,13 @@ PRICE_FLOOR_MULTIPLE = 1.8
 
 
 def shopify_domain() -> str:
-    return os.environ.get("SHOPIFY_STORE_DOMAIN", "vividwalls-2.myshopify.com")
+    """The store's admin domain. Only a `<store>.myshopify.com` host is accepted, because the
+    Admin API token and the app's client secret are sent to it."""
+    import re
+    domain = os.environ.get("SHOPIFY_STORE_DOMAIN", "").strip().lower() or "vividwalls-2.myshopify.com"
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,62}\.myshopify\.com", domain):
+        raise ValueError(f"SHOPIFY_STORE_DOMAIN must be a <store>.myshopify.com domain, not {domain!r}")
+    return domain
 
 
 # macOS Keychain items for Shopify (account = the store's admin domain, so another store's
@@ -54,13 +60,35 @@ def keychain_secret(service: str, account: str | None = None) -> str:
     raise RuntimeError(f'Keychain read for "{service}" failed (exit {done.returncode}): {done.stderr.strip()}')
 
 
-# Access tokens issued from client credentials, per store: {domain: (token, expires_at)}.
-_issued_tokens: dict[str, tuple[str, float]] = {}
+# Access tokens issued from client credentials:
+# {(store domain, client id, secret fingerprint): (token, expires_at)}. Keyed by the credentials
+# too, so a token from a previous app is never reused after the credentials change.
+_issued_tokens: dict[tuple[str, str, str], tuple[str, float]] = {}
 
 
-def forget_shopify_token() -> None:
-    """Drop cached access tokens, e.g. after Shopify rejects one, so the next call asks again."""
-    _issued_tokens.clear()
+def forget_shopify_token(rejected: str) -> bool:
+    """Drop a cached access token that Shopify rejected. Returns True when it was a cached,
+    replaceable token (so asking again can help); fixed tokens are never cached."""
+    stale = [key for key, (token, _) in _issued_tokens.items() if token == rejected]
+    for key in stale:
+        del _issued_tokens[key]
+    return bool(stale)
+
+
+def _client_credentials(domain: str) -> tuple[str, str]:
+    """The app's Client ID and Client secret as one pair: from the environment when either is set
+    there, else from this store's Keychain items. ("", "") when none is configured."""
+    env_pair = (os.environ.get("SHOPIFY_CLIENT_ID", "").strip(), os.environ.get("SHOPIFY_CLIENT_SECRET", "").strip())
+    if any(env_pair):
+        source, pair = "SHOPIFY_CLIENT_ID / SHOPIFY_CLIENT_SECRET", env_pair
+    else:
+        source = f'Keychain services "{SHOPIFY_CLIENT_ID_SERVICE}" and "{SHOPIFY_CLIENT_SECRET_SERVICE}" (account "{domain}")'
+        pair = (keychain_secret(SHOPIFY_CLIENT_ID_SERVICE, account=domain),
+                keychain_secret(SHOPIFY_CLIENT_SECRET_SERVICE, account=domain))
+    if any(pair) and not all(pair):
+        raise RuntimeError(
+            f"Shopify client credentials are incomplete in {source}: both the Client ID and the Client secret are needed.")
+    return pair
 
 
 def _exchange_client_credentials(domain: str, client_id: str, client_secret: str) -> tuple[str, float]:
@@ -84,34 +112,27 @@ def _exchange_client_credentials(domain: str, client_id: str, client_secret: str
 
 def shopify_token() -> str:
     """Admin API access token, from the first of:
-    1. SHOPIFY_ADMIN_TOKEN;
-    2. client credentials (SHOPIFY_CLIENT_ID / SHOPIFY_CLIENT_SECRET, else this store's Keychain
-       items), exchanged for a short-lived token that is cached until shortly before it expires;
-    3. this store's Keychain item holding a fixed Admin API token.
+    1. the app's client credentials (SHOPIFY_CLIENT_ID + SHOPIFY_CLIENT_SECRET, else this store's
+       Keychain items), exchanged for a short-lived token that is cached until shortly before
+       it expires;
+    2. SHOPIFY_ADMIN_TOKEN (a fixed token from an older custom app);
+    3. this store's Keychain item holding such a fixed token.
     Returned only to the Shopify client that authenticates requests; never logged or included
     in tool results."""
+    import hashlib
     import time
-    token = os.environ.get("SHOPIFY_ADMIN_TOKEN", "").strip()
-    if token:
-        return token
     domain = shopify_domain()
-    cached = _issued_tokens.get(domain)
-    if cached and time.time() < cached[1]:
-        return cached[0]
-    client_id = os.environ.get("SHOPIFY_CLIENT_ID", "").strip() or keychain_secret(
-        SHOPIFY_CLIENT_ID_SERVICE, account=domain)
-    client_secret = os.environ.get("SHOPIFY_CLIENT_SECRET", "").strip() or keychain_secret(
-        SHOPIFY_CLIENT_SECRET_SERVICE, account=domain)
-    if client_id and client_secret:
+    client_id, client_secret = _client_credentials(domain)
+    if client_id:
+        key = (domain, client_id, hashlib.sha256(client_secret.encode()).hexdigest())
+        cached = _issued_tokens.get(key)
+        if cached and time.time() < cached[1]:
+            return cached[0]
         token, lasts = _exchange_client_credentials(domain, client_id, client_secret)
-        _issued_tokens[domain] = (token, time.time() + max(lasts - TOKEN_REFRESH_MARGIN, 0))
+        _issued_tokens[key] = (token, time.time() + max(lasts - TOKEN_REFRESH_MARGIN, 0))
         return token
-    if client_id or client_secret:
-        raise RuntimeError(
-            "Shopify client credentials are incomplete: both the Client ID and the Client secret are needed "
-            f'(SHOPIFY_CLIENT_ID / SHOPIFY_CLIENT_SECRET, or Keychain services "{SHOPIFY_CLIENT_ID_SERVICE}" '
-            f'and "{SHOPIFY_CLIENT_SECRET_SERVICE}" with account "{domain}").')
-    token = keychain_secret(SHOPIFY_KEYCHAIN_SERVICE, account=domain)
+    token = os.environ.get("SHOPIFY_ADMIN_TOKEN", "").strip() or keychain_secret(
+        SHOPIFY_KEYCHAIN_SERVICE, account=domain)
     if not token:
         raise RuntimeError(
             "Shopify credentials not found: store the app's Client ID and Client secret in the macOS Keychain "
