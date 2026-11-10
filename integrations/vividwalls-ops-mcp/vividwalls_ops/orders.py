@@ -370,7 +370,8 @@ def quote_order(shop: Shopify, pic: Pictorem, order_name: str, accept_quote: boo
     }
     if rehearsal:
         quote["rehearsal"] = "test order: accepted for a sandbox rehearsal only, never for a real submit"
-    if quote["ready"]:
+    # No approval code for a rehearsal: it must never authorize a real order later.
+    if quote["ready"] and not rehearsal:
         quote["approval_code"] = approval_code(po, delivery_info(addr), _order_lines(quote), total)
     return quote
 

@@ -203,7 +203,8 @@ def test_test_order_can_be_rehearsed_in_sandbox_but_never_placed(monkeypatch):
     mine = order(customer="Store Owner")
     shop, pic = FakeShop([mine]), FakePictorem()
     out = orders.submit_order(shop, pic, "#1009", sandbox=True)
-    assert out["sandbox"] and out["quote"]["rehearsal"] and sent(pic)[0]["testmode"] == "1"
+    assert out["applied"] is False and out["sandbox"] and sent(pic)[0]["testmode"] == "1"
+    assert out["quote"]["rehearsal"] and "approval_code" not in out["quote"]
     assert not any(op == "TagOrder" for op, _ in shop.calls)
     pic = FakePictorem()
     real = orders.submit_order(FakeShop([mine]), pic, "#1009", confirm=True, approval_code="x")
