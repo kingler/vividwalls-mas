@@ -198,6 +198,19 @@ def test_sandbox_submit_uses_test_mode_and_changes_nothing(monkeypatch):
     assert not any(op == "TagOrder" for op, _ in shop.calls)
 
 
+def test_test_order_can_be_rehearsed_in_sandbox_but_never_placed(monkeypatch):
+    monkeypatch.setenv("VIVIDWALLS_ALLOW_WRITES", "1")
+    mine = order(customer="Store Owner")
+    shop, pic = FakeShop([mine]), FakePictorem()
+    out = orders.submit_order(shop, pic, "#1009", sandbox=True)
+    assert out["sandbox"] and out["quote"]["rehearsal"] and sent(pic)[0]["testmode"] == "1"
+    assert not any(op == "TagOrder" for op, _ in shop.calls)
+    pic = FakePictorem()
+    real = orders.submit_order(FakeShop([mine]), pic, "#1009", confirm=True, approval_code="x")
+    assert real["applied"] is False and orders.TEST_ORDER_PROBLEM in real["errors"] and sent(pic) == []
+    assert orders.TEST_ORDER_PROBLEM in orders.quote_order(FakeShop([mine]), FakePictorem(), "#1009")["problems"]
+
+
 def test_retry_with_same_po_returns_the_existing_order(monkeypatch):
     monkeypatch.setenv("VIVIDWALLS_ALLOW_WRITES", "1")
     dup = (409, {"status": False, "duplicate": True, "orderid": 472174,
