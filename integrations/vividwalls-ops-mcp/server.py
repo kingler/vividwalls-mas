@@ -101,7 +101,7 @@ def pictorem_submit_order(order_name: str, confirm: bool = False, approval_code:
     preview to the owner and, only after they approve, call again with confirm=true and that approval_code.
     If the order changed since the preview (address, items, print file, price) the code no longer matches
     and nothing is ordered. Writes must also be switched on. sandbox=true sends it through Pictorem's test
-    mode instead (validated end to end, nothing created or charged). Safe to retry: the PO 'VW-<number>'
+    mode instead (validated end to end, nothing created or charged); sandbox also accepts test orders, for rehearsals. Safe to retry: the PO 'VW-<number>'
     stops a second print of the same order."""
     return orders.submit_order(shop(), pic(), order_name, confirm, sandbox, accept_quote, approval_code)
 

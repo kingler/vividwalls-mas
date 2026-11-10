@@ -115,11 +115,14 @@ def fulfillment_queue(shop: Shopify, now: datetime | None = None) -> list[dict]:
     return queue
 
 
+TEST_ORDER_PROBLEM = "test order: do not submit"
+
+
 def eligibility_problems(order: dict, names: set[str] | None = None) -> list[str]:
     """Reasons an order must not be printed or marked fulfilled."""
     problems = []
     if is_test_order(order, names):
-        problems.append("test order: do not submit")
+        problems.append(TEST_ORDER_PROBLEM)
     if order.get("cancelledAt"):
         problems.append("order was cancelled")
     if order.get("displayFulfillmentStatus") not in (None, "UNFULFILLED"):
@@ -302,14 +305,17 @@ def _find_order(shop: Shopify, order_name: str) -> tuple[dict | None, list[str]]
     return (exact[0], []) if exact else (None, [f"order {name} not found"])
 
 
-def quote_order(shop: Shopify, pic: Pictorem, order_name: str, accept_quote: bool = False) -> dict:
+def quote_order(shop: Shopify, pic: Pictorem, order_name: str, accept_quote: bool = False,
+                allow_test: bool = False) -> dict:
     """Validate and price an order with Pictorem without placing it. `ready` is false with `problems`
-    when it must not be submitted. A quote above the expected cost is a problem unless accept_quote."""
+    when it must not be submitted. A quote above the expected cost is a problem unless accept_quote.
+    allow_test lets a test order through, only for sandbox rehearsals (nothing is created or charged)."""
     order, problems = _find_order(shop, order_name)
     if not order:
         return {"ready": False, "problems": problems}
     sheet = pictorem_order_sheet(order, test_names(shop))
-    problems = list(sheet["problems"])
+    problems = [p for p in sheet["problems"] if not (allow_test and p == TEST_ORDER_PROBLEM)]
+    rehearsal = allow_test and TEST_ORDER_PROBLEM in sheet["problems"]
     sent = [t for t in order.get("tags", []) if re.fullmatch(r"pictorem:\S+", t, re.I)]
     if sent:
         problems.append(f"already sent to Pictorem ({sent[0]}): do not order another print")
@@ -362,7 +368,10 @@ def quote_order(shop: Shopify, pic: Pictorem, order_name: str, accept_quote: boo
         "pictorem_total": round(total, 2), "expected_total": round(expected_total, 2),
         "shipping": "free (US/Canada, no quote sent)",
     }
-    if quote["ready"]:
+    if rehearsal:
+        quote["rehearsal"] = "test order: accepted for a sandbox rehearsal only, never for a real submit"
+    # No approval code for a rehearsal: it must never authorize a real order later.
+    if quote["ready"] and not rehearsal:
         quote["approval_code"] = approval_code(po, delivery_info(addr), _order_lines(quote), total)
     return quote
 
@@ -389,11 +398,13 @@ def _order_lines(quote: dict) -> list[dict]:
 def submit_order(shop: Shopify, pic: Pictorem, order_name: str, confirm: bool = False,
                  sandbox: bool = False, accept_quote: bool = False, approval_code: str = "") -> dict:
     """Place a Shopify order with Pictorem through the ArtFlow API, then tag the Shopify order.
-    sandbox=true runs Pictorem's full pipeline in test mode (nothing created, charged or emailed).
+    sandbox=true runs Pictorem's full pipeline in test mode (nothing created, charged or emailed); it
+    also accepts test orders, so the flow can be rehearsed on one.
     A real order previews unless confirm=true and writes are switched on, because it charges the card.
     confirm must carry the approval_code from the preview the owner approved; if anything changed
     since (address, items, print file, Pictorem price), the codes differ and nothing is ordered."""
-    quote = quote_order(shop, pic, order_name, accept_quote)
+    # Test orders may be rehearsed in Pictorem's test mode (nothing created or charged), never placed.
+    quote = quote_order(shop, pic, order_name, accept_quote, allow_test=sandbox)
     if not quote["ready"]:
         return {"applied": False, "errors": quote["problems"], "quote": quote}
     delivery = delivery_info(quote["ship_to"])
